@@ -1,0 +1,5 @@
+celery_broker/*
+!celery_broker/Readme.md
+celery_results/*
+!celery_results/Readme.md
+control

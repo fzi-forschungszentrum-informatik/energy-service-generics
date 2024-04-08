@@ -1,0 +1,32 @@
+{
+    "cSpell.ignoreWords": [
+        "dtype",
+        "getfixturevalue",
+        "usefixtures"
+    ],
+    "cSpell.words": [
+        "autouse",
+        "bemcom",
+        "caplog",
+        "dataframe",
+        "datapoint",
+        "datapoints",
+        "docstrings",
+        "dotenv",
+        "instrumentator",
+        "jwks",
+        "JWTs",
+        "Keycloak",
+        "levelname",
+        "MQTT",
+        "oidc",
+        "oneshot",
+        "pyjwt",
+        "redoc",
+        "Setpoint",
+        "setpoints",
+        "UNVALIDATED",
+        "uvicorn",
+        "Wölfle"
+    ]
+}

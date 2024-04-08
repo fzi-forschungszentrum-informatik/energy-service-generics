@@ -1,0 +1,72 @@
+# Copyright 2024 FZI Research Center for Information Technology
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
+# SPDX-License-Identifier: Apache-2.0
+
+services:
+    energy-service-generics-devl-autotest:
+        container_name: energy-service-generics-devl-autotest
+        build:
+            context: ./source
+        init: true # Faster shutdown.
+        entrypoint: [ "auto-pytest" ]
+        command: [ "energy_service_generics/tests/" ]
+        tty: true # Colorize output.
+        restart: unless-stopped
+        volumes:
+            - ./source:/source/energy_service_generics/
+        user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+
+    energy-service-generics-devl-api:
+        container_name: energy-service-generics-devl-api
+        build:
+            context: ./source
+            target: esg-service
+        init: true # Faster shutdown.
+        entrypoint: [ "python" ]
+        command: [ "minimal_service/api.py" ]
+        restart: unless-stopped
+        ports:
+            - 8800:8800
+        volumes:
+            - ./minimal_service:/source/minimal_service/
+            - ./source/esg:/usr/local/lib/python3.11/site-packages/esg
+            - ./minimal_service/celery_broker:/celery/broker/
+            - ./minimal_service/celery_results:/celery/results/
+        user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+
+    energy-service-generics-devl-worker:
+        container_name: energy-service-generics-devl-worker
+        build:
+            context: ./source
+            target: esg-service
+        init: true # Faster shutdown.
+        entrypoint: [ "celery" ]
+        command: [ "--app", "worker", "worker", "--loglevel=INFO" ]
+        restart: unless-stopped
+        volumes:
+            # NOTE: This is bit ugly here that we are mounting in the files
+            #       into `/source/`. If we would mount it in instead in
+            #       `/source/minimal_service/` we would need to change the
+            #       the directory before executing the celery command above 
+            #       (which is apparently not possible, or alternatively import
+            #       the worker app from with a leading `minimal_service` as 
+            #       package name. However, the latter causes nasty import
+            #       errors. So this solution here is likely the nicest one.
+            - ./minimal_service:/source/
+            - ./source/esg:/usr/local/lib/python3.11/site-packages/esg
+            - ./minimal_service/celery_broker:/celery/broker/
+            - ./minimal_service/celery_results:/celery/results/
+        user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
