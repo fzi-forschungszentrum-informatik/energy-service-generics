@@ -33,19 +33,34 @@ from uuid import UUID
 
 from time import sleep
 
-from celery import current_task
-from celery import states
-from celery.exceptions import Ignore
-from celery.result import AsyncResult
 from fastapi import FastAPI
 from packaging.version import Version
 import pytest
 import requests
 
+# To prevent tests from failing if only parts of the package are used.
+try:
+    from celery import current_task
+    from celery import states
+    from celery.exceptions import Ignore
+    from celery.result import AsyncResult
+    from prometheus_fastapi_instrumentator import Instrumentator
+    import uvicorn
+
+    service_extra_not_installed = False
+except ModuleNotFoundError:
+    current_task = None
+    states = None
+    Ignore = None
+    AsyncResult = None
+    Instrumentator = None
+    uvicorn = None
+    service_extra_not_installed = True
+
+
 from esg.clients.service import GenericServiceClient
 from esg.models.base import _BaseModel
 from esg.service.api import API
-from esg.service.api import uvicorn
 from esg.service.exceptions import GenericUnexpectedException
 from esg.service.exceptions import RequestInducedException
 from esg.service.worker import execute_payload
@@ -95,7 +110,10 @@ def execute_payload_task(celery_session_app, celery_session_worker):
     return _execute_payload_task
 
 
-@pytest.mark.skipif(uvicorn is None, reason="requires uvicorn")
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 class TestApiInit(TestClassWithFixtures):
     """
     Tests for `esg.service.api.API.__init__`
@@ -289,7 +307,10 @@ class APIInProcess:
         self.process.join()
 
 
-@pytest.mark.skipif(uvicorn is None, reason="requires uvicorn")
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 class TestRun:
     """
     Tests for `esg.service.api.API.run`
@@ -319,6 +340,10 @@ class TestRun:
         assert response.status_code == 200
 
 
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 class TestPostRequest:
     """
     Tests for `esg.service.api.API.post_request`.
@@ -468,6 +493,10 @@ def execute_task_that_raises(celery_session_app, celery_session_worker):
     return task_that_raises
 
 
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 class TestRequestStatus:
     """
     Tests for `esg.service.api.API.get_request_result`.
@@ -550,6 +579,10 @@ class TestRequestStatus:
                 assert actual_task_status_text == "ready"
 
 
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 class TestRequestResult:
     """
     Tests for `esg.service.api.API.get_request_result`.
@@ -668,6 +701,10 @@ def dummy_worker_task(celery_session_app, celery_session_worker):
     return _dummy_worker_task
 
 
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 def test_celery_tests_work_at_all(dummy_worker_task):
     """
     Test that the celery test setup works. If this test fails all other

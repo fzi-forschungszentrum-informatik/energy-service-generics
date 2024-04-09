@@ -24,8 +24,6 @@ import sys
 import logging
 from uuid import UUID
 
-from celery import states
-from celery.result import AsyncResult
 from fastapi import Depends
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -38,9 +36,13 @@ from pydantic import ValidationError
 
 # To prevent tests from failing if only parts of the package are used.
 try:
+    from celery import states
+    from celery.result import AsyncResult
     from prometheus_fastapi_instrumentator import Instrumentator
     import uvicorn
 except ModuleNotFoundError:
+    states = None
+    AsyncResult = None
     Instrumentator = None
     uvicorn = None
 
@@ -59,12 +61,16 @@ from esg.service.exceptions import GenericUnexpectedException
 #       to cancel tasks. This might change in future.
 # NOTE: Celery matches an unknown ID to the pending state. PENDING is
 #       hence not included here.
-TASK_STATUS_MAP = {
-    states.STARTED: "running",
-    states.SUCCESS: "ready",
-    states.FAILURE: "ready",
-    states.RETRY: "queued",
-}
+if states is not None:
+    TASK_STATUS_MAP = {
+        states.STARTED: "running",
+        states.SUCCESS: "ready",
+        states.FAILURE: "ready",
+        states.RETRY: "queued",
+    }
+else:
+    # Prevents tests from failing if only parts of the package are used.
+    TASK_STATUS_MAP = None
 
 
 class API:

@@ -1,3 +1,11 @@
+# Celery seems to create this folder if tests are executed.
+control/
+
+-------------------------
+Standard python .gitignore below this line. Taken from here:
+https://github.com/github/gitignore/blob/main/Python.gitignore
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
