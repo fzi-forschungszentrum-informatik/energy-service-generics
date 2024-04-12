@@ -1704,8 +1704,8 @@ products = [
             "id": None,
             "name": "PVForecast2",
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": "-PT4500S",
-            "coverage_to": "P1DT3540S",
+            "coverage_from": "-PT1H15M",
+            "coverage_to": "P1DT59M",
         },
     },
     {

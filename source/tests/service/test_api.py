@@ -446,7 +446,7 @@ class TestPostRequest:
                     "loc": ["test1"],
                     "msg": "Field required",
                     "input": {"noFieldInModel": "foo bar"},
-                    "url": "https://errors.pydantic.dev/2.6/v/missing",
+                    "url": "https://errors.pydantic.dev/2.7/v/missing",
                 }
             ]
         }
