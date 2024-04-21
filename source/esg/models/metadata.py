@@ -132,8 +132,8 @@ class PVSystem(_BaseModel):
             "The unit of the nominal power is kWp."
         ),
     )
-    power_datapoint_id: int = Field(
-        ...,
+    power_datapoint_id: Optional[int] = Field(
+        None,
         examples=[1],
         description=(
             "The id of the datapoint which is used to store forecasts "

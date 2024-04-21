@@ -1,0 +1,7 @@
+FROM energy_service_generics:latest-service-pandas
+
+RUN pip install pvlib scipy
+COPY service/ /source/service/
+
+ENTRYPOINT [ "celery" ]
+CMD [ "--app", "worker", "worker", "--loglevel=INFO" ]

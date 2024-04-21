@@ -1,0 +1,5 @@
+FROM energy_service_generics:latest-service
+
+COPY api.py data_model.py worker.py /source/service/
+
+CMD ["/source/service/api.py"]
