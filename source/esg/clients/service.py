@@ -41,19 +41,12 @@ class GenericServiceClient(HttpBaseClient):
     -------
         All methods will indirectly raise a `requests.exceptions.HTTPError`
         if anything goes wrong.
-
-    TODO: This needs an update to match the fit-parameters endpoint.
-          The best approach is likely to add an request/fit-parameters
-          flag as argument and rename all methods to be agnostic of that,
-          i.e. `post_jsonable` instead of `post_request_jsonable`
-    TODO: Define URLs as attributes, i.e. as:
-          `status_url = "/request/{task_ID}/status/"`. This should support
-          switching between fit-parameters and request too.
     """
 
     def __init__(
         self,
         base_url,
+        endpoint="request",
         verify=True,
         username=None,
         password=None,
@@ -65,6 +58,9 @@ class GenericServiceClient(HttpBaseClient):
         ----------
         base_url : str
             The root URL of the service API, e.g. `http://localhost:8800`
+        endpoint : str
+            The endpoint type to use. Services should all have a `"request"`
+            endpoint. Some additionally a `"fit-parameters"` endpoint. Others
         verify: bool
             If set to `False` will disable certificate checking.
             Useful if self signed certificates are used but a potential
@@ -85,6 +81,14 @@ class GenericServiceClient(HttpBaseClient):
         """
         logger.info("Starting up GenericServiceClient")
 
+        if endpoint not in ["request", "fit-parameters"]:
+            logger.warning(
+                f'Client configured to use endpoint `"{endpoint}"` '
+                'which is not one of the standardized endpoints (`"request"` '
+                'or `"fit-parameters"`) for services.'
+            )
+
+        self.endpoint = endpoint
         self.InputModel = InputModel
         self.OutputModel = OutputModel
 
@@ -108,9 +112,9 @@ class GenericServiceClient(HttpBaseClient):
         """
         self.get("/")
 
-    def post_request_jsonable(self, input_data_as_jsonable):
+    def post_jsonable(self, input_data_as_jsonable):
         """
-        Calls POST /request/ endpoint of service.
+        Calls POST endpoint of service.
 
         This will store the task_ID in an attribute so you don't have to.
 
@@ -119,16 +123,16 @@ class GenericServiceClient(HttpBaseClient):
         input_data_as_jsonable: python object
             The input data for computing the request in JSONable representation.
         """
-        response = self.post("/request/", json=input_data_as_jsonable)
+        response = self.post(f"/{self.endpoint}/", json=input_data_as_jsonable)
 
         # Check that the response contained the payload we expect and
         # store the task ID for fetching results later.
         task_id = TaskId.model_validate(response.json()).task_ID
         self.task_ids.append(task_id)
 
-    def post_request(self, input_data_obj):
+    def post_obj(self, input_data_obj):
         """
-        Like `post_request_jsonable` but for a python object as input.
+        Like `post_jsonable` but for a python object as input.
 
         This will use `self.InputModel` to parse and validate the object.
 
@@ -139,7 +143,7 @@ class GenericServiceClient(HttpBaseClient):
         """
         input_data = self.InputModel.model_validate(input_data_obj)
         input_data_jsonable = input_data.model_dump_jsonable()
-        self.post_request_jsonable(input_data_as_jsonable=input_data_jsonable)
+        self.post_jsonable(input_data_as_jsonable=input_data_jsonable)
 
     def wait_for_results(self, max_retries=300, retry_wait=1):
         """
@@ -179,7 +183,7 @@ class GenericServiceClient(HttpBaseClient):
         current_task_id = task_ids_to_check.pop(0)
         for _ in range(max_retries):
             while True:
-                status_url = "/request/{}/status/".format(current_task_id)
+                status_url = f"/{self.endpoint}/{current_task_id}/status/"
                 response = self.get(status_url)
                 task_status = TaskStatus.model_validate(response.json())
 
@@ -202,7 +206,7 @@ class GenericServiceClient(HttpBaseClient):
 
         raise RuntimeError("Timeout while waiting for tasks to complete")
 
-    def get_result_jsonable(self):
+    def get_results_jsonable(self):
         """
         Returns a list of task results, one for each task and in the
         same order.
@@ -220,15 +224,15 @@ class GenericServiceClient(HttpBaseClient):
         output_data_jsonable = []
         while self.task_ids:
             task_id = self.task_ids.pop(0)
-            result_url = "/request/{}/result/".format(task_id)
+            result_url = f"/{self.endpoint}/{task_id}/result/"
             response = self.get(result_url)
             output_data_jsonable.append(response.json())
 
         return output_data_jsonable
 
-    def get_results(self):
+    def get_results_obj(self):
         """
-        Like `get_result_jsonable` but for a python object as output.
+        Like `get_results_jsonable` but for a python object as output.
 
         This will use `self.OutputModel` to parse and validate the items
         in the list of responses.
@@ -239,7 +243,7 @@ class GenericServiceClient(HttpBaseClient):
             A list of responses, one item per task. Each response item
             parsed as pydantic model using `self.OutputModel`
         """
-        output_data_jsonable = self.get_result_jsonable()
+        output_data_jsonable = self.get_results_jsonable()
         output_data = []
         for jsonable_item in output_data_jsonable:
             obj = self.OutputModel.model_validate(jsonable_item)

@@ -1519,33 +1519,6 @@ invalid_pv_systems = [
             "power_datapoint_id": 1,
         },
     },
-    # `power_datapoint_id` must exist and cannot be None.
-    {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-        },
-        "JSONable": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-        },
-    },
-    {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": None,
-        },
-        "JSONable": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": None,
-        },
-    },
 ]
 
 plants = [

@@ -19,7 +19,7 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-from esg.service.utils import celery_app_from_environ
+from esg.service.worker import celery_app_from_environ
 from esg.service.worker import invoke_fit_parameters
 from esg.service.worker import invoke_handle_request
 
@@ -33,7 +33,7 @@ app = celery_app_from_environ()
 
 @app.task
 def request_task(input_data_json):
-    invoke_handle_request(
+    return invoke_handle_request(
         input_data_json=input_data_json,
         RequestArguments=RequestArguments,
         FittedParameters=FittedParameters,
@@ -44,7 +44,7 @@ def request_task(input_data_json):
 
 @app.task
 def fit_parameters_task(input_data_json):
-    invoke_fit_parameters(
+    return invoke_fit_parameters(
         input_data_json=input_data_json,
         FitParameterArguments=FitParameterArguments,
         Observations=Observations,

@@ -15,17 +15,37 @@
 # SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 # SPDX-License-Identifier: Apache-2.0
 
+volumes:
+  energy-service-generics-basic-example-transport:
+    name: energy-service-generics-basic-example-transport
+
 services:
-  energy-service-generics-basic-example-autotest:
-    container_name: energy-service-generics-basic-example-autotest
+  energy-service-generics-basic-example-api:
+    container_name: energy-service-generics-basic-example-api
+    build:
+      context: ./source
+      dockerfile: Dockerfile-API
+    init: true # Faster shutdown.
+    restart: unless-stopped
+    ports:
+      - 8800:8800
+    volumes:
+      - energy-service-generics-basic-example-transport:/celery/
+    environment:
+      - CELERY__NAME=minimal_service
+      - 'CELERY__BROKER_URL=filesystem://'
+      - 'CELERY__FS_TRANSPORT_BASE_FOLDER=/celery/'
+
+  energy-service-generics-basic-example-worker:
+    container_name: energy-service-generics-basic-example-worker
     build:
       context: ./source
       dockerfile: Dockerfile-worker
     init: true # Faster shutdown.
-    entrypoint: [ "auto-pytest" ]
-    command: [ "/source/service/" ]
-    tty: true # Colorize output.
     restart: unless-stopped
     volumes:
-      - ./source/service:/source/service/
-    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+      - energy-service-generics-basic-example-transport:/celery/
+    environment:
+      - CELERY__NAME=minimal_service
+      - 'CELERY__BROKER_URL=filesystem://'
+      - 'CELERY__FS_TRANSPORT_BASE_FOLDER=/celery/'

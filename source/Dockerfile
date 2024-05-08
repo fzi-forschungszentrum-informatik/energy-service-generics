@@ -40,6 +40,8 @@ COPY tests /source/energy_service_generics/tests
 COPY setup.py pytest.ini /source/energy_service_generics/
 RUN pip install /source/energy_service_generics
 
+# Place the dummy forecasting or optimization component. 
+COPY esg/service/dummy_fooc.py /source/service/fooc.py
 
 
 # Extended image for tag x.y.z-service

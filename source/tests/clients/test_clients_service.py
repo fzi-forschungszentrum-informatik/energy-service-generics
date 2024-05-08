@@ -19,6 +19,7 @@ SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime
 from datetime import timezone
+import logging
 from typing import List
 from unittest.mock import MagicMock
 from uuid import uuid4
@@ -39,8 +40,38 @@ class TestGenericServiceClientInit(GenericCheckConnectionTests):
     client_class = GenericServiceClient
     base_path = "/"
 
+    def test_unusual_endpoint_warns(self, caplog, httpserver):
+        """
+        It is likely an accident if a user uses a endpoint which is not
+        `"request"` or `"fit-parameters"`.
+        """
+        caplog.set_level(logging.WARNING)
+        expected_request = httpserver.expect_request(self.base_path)
+        expected_request.respond_with_data(b"")
 
-def create_client(httpserver):
+        # Check that no previous logs interfere with the tests.
+        assert len(caplog.records) == 0
+
+        # These are the expected values, expect no warning here.
+        _ = self.client_class(
+            base_url=httpserver.url_for(self.base_path), endpoint="request"
+        )
+        assert len(caplog.records) == 0
+        _ = self.client_class(
+            base_url=httpserver.url_for(self.base_path),
+            endpoint="fit-parameters",
+        )
+        assert len(caplog.records) == 0
+
+        _ = self.client_class(
+            base_url=httpserver.url_for(self.base_path),
+            endpoint="something-else",
+        )
+        assert len(caplog.records) == 1
+        assert "something-else" in caplog.records[0].message
+
+
+def create_client(httpserver, endpoint="request"):
     """
     Create GenericServiceClient instance.
     This expects one request to API root fired during creating the
@@ -48,31 +79,33 @@ def create_client(httpserver):
     httpserver as if this call would not have happened.
     """
     httpserver.expect_oneshot_request("/").respond_with_data(b"")
-    client = GenericServiceClient(base_url=httpserver.url_for("/"))
+    client = GenericServiceClient(
+        base_url=httpserver.url_for("/"), endpoint=endpoint
+    )
     httpserver.clear_log()
     return client
 
 
-class TestGenericServiceClientPostRequestJsonable:
+class TestGenericServiceClientPostJsonable:
     """
-    Tests for `GenericServiceClient.post_request_jsonable`
+    Tests for `GenericServiceClient.post_jsonable`
     """
 
     test_task_id = uuid4()
 
-    def post_request(self, httpserver, client):
+    def post_jsonable(self, httpserver, client, endpoint="request"):
         """
         prevent redundant code.
         """
         test_input_data = {"test": 1}
         expected_request = httpserver.expect_request(
-            "/request/", method="POST", json=test_input_data
+            f"/{endpoint}/", method="POST", json=test_input_data
         )
         expected_request.respond_with_json(
             {"task_ID": str(self.test_task_id)}, status=201
         )
 
-        client.post_request_jsonable(test_input_data)
+        client.post_jsonable(test_input_data)
 
     def test_endpoint_called(self, httpserver):
         """
@@ -82,7 +115,20 @@ class TestGenericServiceClientPostRequestJsonable:
 
         client = create_client(httpserver)
 
-        self.post_request(httpserver, client)
+        self.post_jsonable(httpserver, client)
+
+        # Check that the test server has received exactly one call.
+        assert len(httpserver.log) == 1
+
+    def test_endpoint_called_fit_parameters(self, httpserver):
+        """
+        Like `test_endpoint_called` but checks that the fit parameters
+        endpoint can be used too.
+        """
+
+        client = create_client(httpserver, endpoint="fit-parameters")
+
+        self.post_jsonable(httpserver, client, endpoint="fit-parameters")
 
         # Check that the test server has received exactly one call.
         assert len(httpserver.log) == 1
@@ -97,7 +143,7 @@ class TestGenericServiceClientPostRequestJsonable:
         other_id = uuid4()
         client.task_ids.append(other_id)
 
-        self.post_request(httpserver, client)
+        self.post_jsonable(httpserver, client)
 
         expected_task_id = self.test_task_id
         assert expected_task_id in client.task_ids
@@ -111,15 +157,15 @@ class TestGenericServiceClientPostRequestJsonable:
         assert len(httpserver.log) == 1
 
 
-class TestGenericServiceClientPostRequest:
+class TestGenericServiceClientPostObj:
     """
-    Tests for `GenericServiceClient.post_request`
+    Tests for `GenericServiceClient.post_obj`
     """
 
-    def test_post_request_jsonable_called(self, httpserver):
+    def test_post_jsonable_called(self, httpserver):
         """
         Verify that input data is converted using the model and that
-        `post_request_jsonable` is called to call the service.
+        `post_jsonable` is called to call the service.
         """
 
         class InputModel(_BaseModel):
@@ -127,25 +173,25 @@ class TestGenericServiceClientPostRequest:
 
         client = create_client(httpserver)
         client.InputModel = InputModel
-        client.post_request_jsonable = MagicMock()
+        client.post_jsonable = MagicMock()
 
         test_input_data_obj = {
             "test": datetime(2022, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
             # this should be removed by the model.
             "test2": 1,
         }
-        client.post_request(input_data_obj=test_input_data_obj)
+        client.post_obj(input_data_obj=test_input_data_obj)
 
-        assert client.post_request_jsonable.called
+        assert client.post_jsonable.called
 
-        call_args = client.post_request_jsonable.call_args
+        call_args = client.post_jsonable.call_args
         expected_input_data_jsonable = {"test": "2022-01-02T03:04:05Z"}
         actual_input_data_jsonable = call_args.kwargs["input_data_as_jsonable"]
         assert actual_input_data_jsonable == expected_input_data_jsonable
 
-    def test_post_request_jsonable_called_for_root_model(self, httpserver):
+    def test_post_jsonable_called_for_root_model(self, httpserver):
         """
-        Like `test_post_request_jsonable_called` above but this time for a
+        Like `test_post_jsonable_called` above but this time for a
         model with a list as root.
 
         """
@@ -158,7 +204,7 @@ class TestGenericServiceClientPostRequest:
 
         client = create_client(httpserver)
         client.InputModel = InputModel
-        client.post_request_jsonable = MagicMock()
+        client.post_jsonable = MagicMock()
 
         test_input_data_obj = [
             {
@@ -167,11 +213,11 @@ class TestGenericServiceClientPostRequest:
                 "test2": 1,
             }
         ]
-        client.post_request(input_data_obj=test_input_data_obj)
+        client.post_obj(input_data_obj=test_input_data_obj)
 
-        assert client.post_request_jsonable.called
+        assert client.post_jsonable.called
 
-        call_args = client.post_request_jsonable.call_args
+        call_args = client.post_jsonable.call_args
         expected_input_data_jsonable = [{"test": "2022-01-02T03:04:05Z"}]
         actual_input_data_jsonable = call_args.kwargs["input_data_as_jsonable"]
         assert actual_input_data_jsonable == expected_input_data_jsonable
@@ -196,7 +242,9 @@ class TestGenericServiceClientWaitForResults:
         "ETA_seconds": None,
     }
 
-    def call_wait_for_results(self, httpserver, client, max_retries=3):
+    def call_wait_for_results(
+        self, httpserver, client, max_retries=3, endpoint="request"
+    ):
         """
         prevent redundant code.
 
@@ -208,27 +256,27 @@ class TestGenericServiceClientWaitForResults:
         client.task_ids = self.test_task_ids
 
         expected_request_1 = httpserver.expect_ordered_request(
-            "/request/{}/status/".format(self.test_task_ids[0]), method="GET"
+            f"/{endpoint}/{self.test_task_ids[0]}/status/", method="GET"
         )
         expected_request_1.respond_with_json(self.status_running, status=200)
 
         expected_request_2 = httpserver.expect_ordered_request(
-            "/request/{}/status/".format(self.test_task_ids[0]), method="GET"
+            f"/{endpoint}/{self.test_task_ids[0]}/status/", method="GET"
         )
         expected_request_2.respond_with_json(self.status_ready, status=200)
 
         expected_request_3 = httpserver.expect_ordered_request(
-            "/request/{}/status/".format(self.test_task_ids[1]), method="GET"
+            f"/{endpoint}/{self.test_task_ids[1]}/status/", method="GET"
         )
         expected_request_3.respond_with_json(self.status_running, status=200)
 
         expected_request_4 = httpserver.expect_ordered_request(
-            "/request/{}/status/".format(self.test_task_ids[1]), method="GET"
+            f"/{endpoint}/{self.test_task_ids[1]}/status/", method="GET"
         )
         expected_request_4.respond_with_json(self.status_ready, status=200)
 
         expected_request_5 = httpserver.expect_ordered_request(
-            "/request/{}/status/".format(self.test_task_ids[2]), method="GET"
+            f"/{endpoint}/{self.test_task_ids[2]}/status/", method="GET"
         )
         expected_request_5.respond_with_json(self.status_ready, status=200)
 
@@ -242,6 +290,16 @@ class TestGenericServiceClientWaitForResults:
         """
         client = create_client(httpserver)
         self.call_wait_for_results(httpserver, client)
+
+    def test_status_for_all_tasks_fetched_fit_parameters(self, httpserver):
+        """
+        Like `test_status_for_all_tasks_fetched` but for the `"fit-parameters"`
+        endpoint.
+        """
+        client = create_client(httpserver, endpoint="fit-parameters")
+        self.call_wait_for_results(
+            httpserver, client, endpoint="fit-parameters"
+        )
 
     def test_all_tasks_finished_set(self, httpserver):
         """
@@ -274,9 +332,9 @@ class TestGenericServiceClientWaitForResults:
             self.call_wait_for_results(httpserver, client, max_retries=1)
 
 
-class TestGenericServiceClientGetResultJsonable:
+class TestGenericServiceClientGetResultsJsonable:
     """
-    Tests for `GenericServiceClient.get_result_jsonable`
+    Tests for `GenericServiceClient.get_results_jsonable`
     """
 
     test_task_ids = [uuid4(), uuid4(), uuid4()]
@@ -286,12 +344,12 @@ class TestGenericServiceClientGetResultJsonable:
         {"out": "2022-01-02T03:04:07+00:00"},
     ]
 
-    def get_result(self, httpserver, client):
+    def get_result(self, httpserver, client, endpoint="request"):
         """
         prevent redundant code.
         """
         expected_request_1 = httpserver.expect_ordered_request(
-            "/request/{}/result/".format(self.test_task_ids[0]),
+            f"/{endpoint}/{self.test_task_ids[0]}/result/",
             method="GET",
         )
         expected_request_1.respond_with_json(
@@ -299,18 +357,18 @@ class TestGenericServiceClientGetResultJsonable:
         )
 
         expected_request_2 = httpserver.expect_ordered_request(
-            "/request/{}/result/".format(self.test_task_ids[1]),
+            f"/{endpoint}/{self.test_task_ids[1]}/result/",
             method="GET",
         )
         expected_request_2.respond_with_json(
             self.test_output_data[1], status=200
         )
 
-        expected_request_2 = httpserver.expect_ordered_request(
-            "/request/{}/result/".format(self.test_task_ids[2]),
+        expected_request_3 = httpserver.expect_ordered_request(
+            f"/{endpoint}/{self.test_task_ids[2]}/result/",
             method="GET",
         )
-        expected_request_2.respond_with_json(
+        expected_request_3.respond_with_json(
             self.test_output_data[2], status=200
         )
 
@@ -318,7 +376,7 @@ class TestGenericServiceClientGetResultJsonable:
         client.wait_for_results = MagicMock()
         client.task_ids = self.test_task_ids.copy()
 
-        return client.get_result_jsonable()
+        return client.get_results_jsonable()
 
     def test_wait_for_results_called(self, httpserver):
         """
@@ -333,11 +391,24 @@ class TestGenericServiceClientGetResultJsonable:
         assert client.wait_for_results.called
 
     def test_endpoint_called(self, httpserver):
-        """ """
+        """
+        Check that the correct endpoint URLs have been called.
+        """
         client = create_client(httpserver)
         client.wait_for_results = MagicMock()
 
         _ = self.get_result(httpserver, client)
+
+        assert len(httpserver.log) == 3
+
+    def test_endpoint_called_fit_parameters(self, httpserver):
+        """
+        Like `test_endpoint_called` but for the `"fit-parameters"` endpoint.
+        """
+        client = create_client(httpserver, endpoint="fit-parameters")
+        client.wait_for_results = MagicMock()
+
+        _ = self.get_result(httpserver, client, endpoint="fit-parameters")
 
         assert len(httpserver.log) == 3
 
@@ -366,15 +437,15 @@ class TestGenericServiceClientGetResultJsonable:
         assert output_data_jsonable == self.test_output_data
 
 
-class TestGenericServiceClientGetResult:
+class TestGenericServiceClientGetResultsObj:
     """
     Tests for `GenericServiceClient.get_result`
     """
 
-    def test_get_result_jsonable_called(self, httpserver):
+    def test_get_results_jsonable_called(self, httpserver):
         """
         Verify that output data is converted using the model and that
-        `get_result_jsonable` is called to retrieve the result.
+        `get_results_jsonable` is called to retrieve the result.
         """
 
         class OutputModel(_BaseModel):
@@ -388,11 +459,11 @@ class TestGenericServiceClientGetResult:
 
         client = create_client(httpserver)
         client.OutputModel = OutputModel
-        client.get_result_jsonable = MagicMock(return_value=test_output_data)
+        client.get_results_jsonable = MagicMock(return_value=test_output_data)
 
-        actual_output_data = client.get_results()
+        actual_output_data = client.get_results_obj()
 
-        assert client.get_result_jsonable.called
+        assert client.get_results_jsonable.called
 
         expected_output_data = [
             OutputModel.model_validate(i) for i in test_output_data
@@ -400,9 +471,9 @@ class TestGenericServiceClientGetResult:
 
         assert actual_output_data == expected_output_data
 
-    def test_get_result_jsonable_called_for_root_model(self, httpserver):
+    def test_get_results_jsonable_called_for_root_model(self, httpserver):
         """
-        Like `test_get_result_jsonable_called` but for `OutputModel` containing
+        Like `test_get_results_jsonable_called` but for `OutputModel` containing
         a list as root element.
         """
 
@@ -420,11 +491,11 @@ class TestGenericServiceClientGetResult:
 
         client = create_client(httpserver)
         client.OutputModel = OutputModel
-        client.get_result_jsonable = MagicMock(return_value=test_output_data)
+        client.get_results_jsonable = MagicMock(return_value=test_output_data)
 
-        actual_output_data = client.get_results()
+        actual_output_data = client.get_results_obj()
 
-        assert client.get_result_jsonable.called
+        assert client.get_results_jsonable.called
 
         expected_output_data = [
             OutputModel.model_validate(i) for i in test_output_data
