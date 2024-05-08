@@ -1,4 +1,11 @@
 """
+Dummy Forecasting or optimization code of the service.
+
+This file can be used to provide a fooc.py file to the API component that
+has a valid signature but not the actual code. This allows the API to
+import the tasks from the worker without requiring to install all dependencies
+the worker code might have.
+
 Copyright 2024 FZI Research Center for Information Technology
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,3 +23,11 @@ limitations under the License.
 SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
+
+
+def handle_request(input_data):
+    raise NotImplementedError()
+
+
+def fit_parameters(input_data):
+    raise NotImplementedError()

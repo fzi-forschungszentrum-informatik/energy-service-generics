@@ -33,7 +33,7 @@ from service.fooc import handle_request, fit_parameters
 from service.data_model import RequestArguments
 from service.data_model import FittedParameters, Observations
 from service.data_model import FitParameterArguments
-from .test_data import OPEN_METEO_RESPONSE, OPEN_METEO_RESPONSE_DF
+from .data import OPEN_METEO_RESPONSE, OPEN_METEO_RESPONSE_DF
 
 RequestInput = compute_request_input_model(
     RequestArguments=RequestArguments,
@@ -41,8 +41,8 @@ RequestInput = compute_request_input_model(
 )
 
 FitParametersInput = compute_fit_parameters_input_model(
-    FitParametersArguments=FitParameterArguments,
-    FitParametersObservations=Observations,
+    FitParameterArguments=FitParameterArguments,
+    Observations=Observations,
 )
 
 
@@ -199,13 +199,11 @@ def test_fit_parameters(open_meteo_httpserver):
     measured_data_pd = measured_data_pd.iloc[:-12]
 
     expected_output = {
-        "parameters": {
-            "pv_system": {
-                "azimuth_angle": 15,
-                "inclination_angle": 25,
-                "nominal_power": 4.5,
-            }
-        },
+        "pv_system": {
+            "azimuth_angle": 15,
+            "inclination_angle": 25,
+            "nominal_power": 4.5,
+        }
     }
 
     input_data = FitParametersInput(

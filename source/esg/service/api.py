@@ -51,6 +51,8 @@ from esg.models.task import HTTPValidationError
 from esg.models.task import TaskId
 from esg.models.task import TaskStatus
 from esg.service.exceptions import GenericUnexpectedException
+from esg.service.worker import compute_fit_parameters_input_model
+from esg.service.worker import compute_request_input_model
 
 
 # Map the built in states of celery to the state definitions of service
@@ -71,6 +73,50 @@ if states is not None:
 else:
     # Prevents tests from failing if only parts of the package are used.
     TASK_STATUS_MAP = None
+
+
+class FastAPIExtendedModels(FastAPI):
+    """
+    A simple extension to FastAPI that allows manually adding models to
+    the OpenAPI schema.
+    """
+
+    def __init__(self, *args, post_body_models_by_path=None, **kwargs):
+        """
+        Arguments:
+        ----------
+        post_body_models_by_path : dict[path, Pydantic Model]
+            The models that should be added by the path they should be added
+            to. E.g. {"/fit-parameters/"): SomeModel}. Only for Models that
+            describe the body of a post call.
+        """
+        super().__init__(*args, **kwargs)
+        if post_body_models_by_path is None:
+            post_body_models_by_path = {}
+        self.post_body_models_by_path = post_body_models_by_path
+
+    def openapi(self):
+        """
+        Add code to add models to the `openapi` method of `FastAPI`.
+
+        See the FastAPI code here to understand what's going on.
+        https://github.com/tiangolo/fastapi/blob/a94ef3351e0a25ffa45d131b9ba9b0f7f7c31fe5/fastapi/applications.py#L966C9-L966C22
+        """
+        if not self.openapi_schema:
+            super().openapi()
+
+            paths = self.openapi_schema["paths"]
+            for path, model in self.post_body_models_by_path.items():
+                model_schema = model.model_json_schema(
+                    ref_template="#/components/schemas/{model}"
+                )
+                model_defs = model_schema.pop("$defs")
+                paths[path]["post"]["requestBody"] = {
+                    "content": {"application/json": {"schema": model_schema}}
+                }
+                self.openapi_schema["components"]["schemas"].update(model_defs)
+
+        return self.openapi_schema
 
 
 class API:
@@ -146,7 +192,13 @@ class API:
         },
     }
 
-    # Here the description texts for the three endpoints. FastAPI uses
+    # By default, the responses for the request endpoint should be fine
+    # for the fit parameters endpoints too.
+    post_fit_parameters_responses = post_request_responses.copy()
+    get_fit_parameters_status_responses = get_request_status_responses.copy()
+    get_fit_parameters_result_responses = get_request_result_responses.copy()
+
+    # Here the description texts for the six endpoints. FastAPI uses
     # the docstrings by default. However, these contain a lot if internal
     # stuff that is not relevant for the user. Hence the here the option
     # to set these explicitly.
@@ -156,15 +208,28 @@ class API:
     )
     get_request_status_description = "Return the status of a request task."
     get_request_result_description = "Return the result of a request task."
+    post_fit_parameters_description = (
+        "Create a task to fit parameters in the background."
+    )
+    get_fit_parameters_status_description = (
+        "Return the status of a fit parameters task."
+    )
+    get_fit_parameters_result_description = (
+        "Return the result of a fit parameters task."
+    )
 
     def __init__(
         self,
-        RequestInput,
+        RequestArguments,
         RequestOutput,
         request_task,
         title,
-        description,
         version,
+        FitParameterArguments=None,
+        Observations=None,
+        FittedParameters=None,
+        fit_parameters_task=None,
+        description=None,
         version_root_path=None,
         fastapi_kwargs={},
     ):
@@ -182,6 +247,8 @@ class API:
               https://github.com/tiangolo/fastapi/blob/ab22b795903bb9a782ccfc3d2b4e450b565f6bfc/fastapi/applications.py#L332
               https://pyjwt.readthedocs.io/en/latest/usage.html
 
+        TODO: Change arguments of method to match the example code.
+
         Environment variables:
         ----------------------
         LOGLEVEL : str
@@ -195,9 +262,9 @@ class API:
 
         Arguments:
         ----------
-        RequestInput : pydantic model
-            A Model defining the structure and documentation of the input data,
-            i.e. the data that is necessary to process a request.
+        RequestArguments : pydantic model
+            A model defining the structure of the  arguments that are required
+            to compute a request.
         RequestOutput : pydantic model
             A Model defining the structure and documentation of the output data,
             i.e. the result of the request.
@@ -209,12 +276,23 @@ class API:
         title : str
             The title (aka name) of the service. Forwarded to FastAPI, see also:
             https://fastapi.tiangolo.com/tutorial/metadata/
-        description : str
-            The description of the service. Forwarded to FastAPI, see also:
-            https://fastapi.tiangolo.com/tutorial/metadata/
         version : `packaging.version.Version` instance
             The version of the service. Is used to extend the schema
             documentation.
+        FitParameterArguments : pydantic model
+            A model defining the structure of the  arguments that are required
+            to fit the parameters.
+        Observations : pydantic model
+            A model defining the structure of the true observed data used for
+            fitting the parameters.
+        FittedParameters : pydantic model
+            A model defining the structure of the fitted parameters required
+            to compute a request.
+        fit_parameters_task : Celery task
+            Like `request_task` but for the POST /fit-parameters/ endpoint.
+        description : str
+            The description of the service. Forwarded to FastAPI, see also:
+            https://fastapi.tiangolo.com/tutorial/metadata/
         version_root_path : str or None
             Can be used to specify the version name expected in root path.
             If `None` or empty will default to `f"v{version.major}"`.
@@ -229,9 +307,28 @@ class API:
                 "using docker consider using a tag with `-service`."
             )
 
-        self.RequestInput = RequestInput
+        # These two must always be available.
         self.RequestOutput = RequestOutput
         self.request_task = request_task
+
+        if fit_parameters_task is None:
+            # No fitting parameters means we don't have parameters
+            # in the request model.
+            self.RequestInput = compute_request_input_model(
+                RequestArguments=RequestArguments,
+            )
+        else:
+            # Fitting parameters is enabled, all models must be set up.
+            self.RequestInput = compute_request_input_model(
+                RequestArguments=RequestArguments,
+                FittedParameters=FittedParameters,
+            )
+            self.FitParametersInput = compute_fit_parameters_input_model(
+                FitParameterArguments=FitParameterArguments,
+                Observations=Observations,
+            )
+            self.FitParametersOutput = FittedParameters
+            self.fit_parameters_task = fit_parameters_task
 
         # Log everything to stdout by default, i.e. to docker container logs.
         # This comes on top as we want to emit our initial log message as soon
@@ -277,6 +374,12 @@ class API:
                 f"Got instead: {fastapi_root_path}"
             )
 
+        post_body_models_by_path = {"/request/": self.RequestInput}
+        if fit_parameters_task is not None:
+            post_body_models_by_path["/fit-parameters/"] = (
+                self.FitParametersInput
+            )
+
         # TODO: Rework this, just a tester yet.
         # The FastAPI docs are not very complete here. This was found here:
         # https://github.com/HarryMWinters/fastapi-oidc/issues/1
@@ -285,8 +388,8 @@ class API:
         #     scheme_name="My Authentication Method",
         # )
 
-        # Define the REST API Endpoint.
-        self.fastapi_app = FastAPI(
+        # General settings for the REST API.
+        self.fastapi_app = FastAPIExtendedModels(
             title=title,
             description=description,
             docs_url="/",
@@ -297,39 +400,59 @@ class API:
                 Depends(self.dummy_dependency),
                 # Depends(self.fastapi_oauth2),
             ],
+            post_body_models_by_path=post_body_models_by_path,
+            **fastapi_kwargs,
         )
+
+        # Setup the request endpoints.
         self.fastapi_app.post(
             "/request/",
             status_code=status.HTTP_201_CREATED,
             response_model=TaskId,
             responses=self.post_request_responses,
             description=self.post_request_description,
-            openapi_extra={
-                # Allows us to add the schema of `RequestInput` to the API
-                # docs, even though we don't use the standard way of patching
-                # the model to the endpoint.
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": RequestInput.model_json_schema()
-                        }
-                    },
-                    "required": True,
-                },
-            },
+            tags=["request"],
         )(self.post_request)
         self.fastapi_app.get(
             "/request/{task_id}/status/",
             response_model=TaskStatus,
             responses=self.get_request_status_responses,
             description=self.get_request_status_description,
-        )(self.get_request_status)
+            tags=["request"],
+        )(self.get_status)
         self.fastapi_app.get(
             "/request/{task_id}/result/",
             response_model=RequestOutput,
             responses=self.get_request_result_responses,
             description=self.get_request_result_description,
+            tags=["request"],
         )(self.get_request_result)
+
+        if fit_parameters_task is not None:
+            # Setup for the fit-parameters endpoints in a similar manner
+            # to the request endpoints above.
+            self.fastapi_app.post(
+                "/fit-parameters/",
+                status_code=status.HTTP_201_CREATED,
+                response_model=TaskId,
+                responses=self.post_fit_parameters_responses,
+                description=self.post_fit_parameters_description,
+                tags=["fit-parameters"],
+            )(self.post_fit_parameters)
+            self.fastapi_app.get(
+                "/fit-parameters/{task_id}/status/",
+                response_model=TaskStatus,
+                responses=self.get_fit_parameters_status_responses,
+                description=self.get_fit_parameters_status_description,
+                tags=["fit-parameters"],
+            )(self.get_status)
+            self.fastapi_app.get(
+                "/fit-parameters/{task_id}/result/",
+                response_model=FittedParameters,
+                responses=self.get_fit_parameters_result_responses,
+                description=self.get_fit_parameters_result_description,
+                tags=["fit-parameters"],
+            )(self.get_fit_parameters_result)
 
     def dummy_dependency(self):
         print(f"Test: {self.fastapi_app.title}")
@@ -357,15 +480,42 @@ class API:
 
         return TaskId(task_ID=task.id)
 
-    async def get_request_status(self, task_id: UUID):
+    async def post_fit_parameters(self, request: Request):
         """
-        This method triggers the computation of the status response, it thus
-        answers any calls to the  GET /request/{task_ID}/status/ endpoint.
+        Handle post calls to the fit-parameters endpoint.
+
+        This checks that the user data matches the related input data model
+        and creates a task that is computed by the worker.
+        """
+        # Validate that the sent data matches the input schema...
+        raw_body = await request.body()
+        try:
+            _ = self.FitParametersInput.model_validate_json(raw_body)
+        except ValidationError as exc:
+            # This does the same thing FastAPI does on ValidationErrors. See:
+            # https://github.com/tiangolo/fastapi/blob/master/docs_src/handling_errors/tutorial006.py
+            return await request_validation_exception_handler(request, exc)
+
+        # ... and forward the JSON data to the worker.
+        # Here we use the JSON originally sent by the client to prevent
+        # that we need to serialize the parsed data again.
+        task = self.fit_parameters_task.delay(input_data_json=raw_body)
+
+        return TaskId(task_ID=task.id)
+
+    async def get_status(self, task_id: UUID):
+        """
+        This method triggers the computation of the status response.
+
+        It does this for both endpoints, i.e. for GET /request/{task_ID}/status/
+        and for GET /fit-parameters/{task_ID}/status/ as there is no change in
+        logic and Celery apparently does not differentiate the IDs of tasks
+        by the corresponding method.
 
         Arguments:
         ----------
         task_id : UUID
-            As returned by POST /request/
+            As returned by POST /request/ or /fit-parameters/
 
         Returns:
         --------
@@ -399,10 +549,9 @@ class API:
         task_status = TaskStatus(status_text=task_status_text)
         return task_status
 
-    async def get_request_result(self, task_id: UUID):
+    async def get_result(self, task_id: UUID):
         """
-        This method fetches the result of a task, it thus answers any calls
-        to the  GET /request/{task_ID}/result/ endpoint.
+        Fetches the result from the celery backend and handles errors.
 
         Arguments:
         ----------
@@ -411,8 +560,8 @@ class API:
 
         Returns:
         --------
-        response : fastapi.responses.JSONResponse instance
-            The validated output data in a JSON response object.
+        output_data_json : str
+            The result of the task.
 
         Raises:
         -------
@@ -446,13 +595,72 @@ class API:
             self.logger.info("Failed task encountered for ID: %s", task_id)
             raise GenericUnexpectedException()
 
-        # Fetch and verify that the output data matches the API docs.
+        # Fetch the result.
         output_data_json = task.get()
+        return output_data_json
+
+    async def get_request_result(self, task_id: UUID):
+        """
+        This method fetches the result of a task, it thus answers any calls
+        to the  GET /request/{task_ID}/result/ endpoint.
+
+        Arguments:
+        ----------
+        task_id : UUID
+            As returned by POST /request/
+
+        Returns:
+        --------
+        response : fastapi.responses.JSONResponse instance
+            The validated output data in a JSON response object.
+        """
+        output_data_json = await self.get_result(task_id=task_id)
+        if output_data_json is None:
+            self.logger.error("Task returned no data!")
+            raise GenericUnexpectedException()
+
+        # Verify that the output matches the API docs.
         try:
             self.RequestOutput.model_validate_json(output_data_json)
         except ValidationError:
+            # TODO: Verify here that not the wrong endpoint has been used.
+            #       Give the user a hint if so.
             self.logger.error(
-                "Task computed data not matching the Output data model."
+                "Task computed data not matching the `RequestOutput` model."
+            )
+            raise GenericUnexpectedException()
+
+        # Directly return the JSON data. This saves a few CPU
+        # cycles by preventing that the data is serialized again.
+        response = Response(
+            content=output_data_json, media_type="application/json"
+        )
+        return response
+
+    async def get_fit_parameters_result(self, task_id: UUID):
+        """
+        This method fetches the result of a task, it thus answers any calls
+        to the  GET /fit-parameters/{task_ID}/result/ endpoint.
+
+        Arguments:
+        ----------
+        task_id : UUID
+            As returned by POST /fit-parameters/
+
+        Returns:
+        --------
+        response : fastapi.responses.JSONResponse instance
+            The validated output data in a JSON response object.
+        """
+        output_data_json = await self.get_result(task_id=task_id)
+
+        # Verify that the output matches the API docs.
+        try:
+            self.FitParametersOutput.model_validate_json(output_data_json)
+        except ValidationError:
+            self.logger.error(
+                "Task computed data not matching the `FitParametersOutput` "
+                "model."
             )
             raise GenericUnexpectedException()
 

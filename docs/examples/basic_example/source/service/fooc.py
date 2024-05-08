@@ -259,6 +259,4 @@ def fit_parameters(input_data):
         meteo_data=meteo_data,
         measured_power=measured_power,
     )
-    output_data = {"parameters": fitted_pv_system}
-
-    return output_data
+    return fitted_pv_system

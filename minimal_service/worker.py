@@ -1,4 +1,6 @@
 """
+Code of the worker component.
+
 Copyright 2024 FZI Research Center for Information Technology
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,34 +19,35 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-from celery import Celery
-from esg.service.worker import execute_payload
+from esg.service.worker import celery_app_from_environ
+from esg.service.worker import invoke_fit_parameters
+from esg.service.worker import invoke_handle_request
 
-from data_model import RequestInput
-from data_model import RequestOutput
+from data_model import RequestArguments, RequestOutput
+from data_model import FittedParameters, Observations
+from data_model import FitParameterArguments
+from fooc import fit_parameters, handle_request
 
-
-app = Celery(
-    __name__,
-    broker_url="filesystem://",
-    broker_transport_options={
-        "data_folder_in": "/celery/broker/",
-        "data_folder_out": "/celery/broker/",
-    },
-    result_backend="file:///celery/results/",
-)
-
-
-def compute_request(input_data):
-    return {"test2": str(input_data.test1)}
+app = celery_app_from_environ()
 
 
 @app.task
 def request_task(input_data_json):
-    output_data_json = execute_payload(
+    return invoke_handle_request(
         input_data_json=input_data_json,
-        InputDataModel=RequestInput,
-        payload_function=compute_request,
-        OutputDataModel=RequestOutput,
+        RequestArguments=RequestArguments,
+        FittedParameters=FittedParameters,
+        handle_request_function=handle_request,
+        RequestOutput=RequestOutput,
     )
-    return output_data_json
+
+
+@app.task
+def fit_parameters_task(input_data_json):
+    return invoke_fit_parameters(
+        input_data_json=input_data_json,
+        FitParameterArguments=FitParameterArguments,
+        Observations=Observations,
+        fit_parameters_function=fit_parameters,
+        FittedParameters=FittedParameters,
+    )

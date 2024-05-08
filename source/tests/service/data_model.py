@@ -38,11 +38,11 @@ class RequestOutput(_BaseModel):
     weighted_sum: int
 
 
-class FitParametersArguments(_RootModel):
+class FitParameterArguments(_RootModel):
     root: List[RequestArguments]
 
 
-class FitParametersObservations(_RootModel):
+class Observations(_RootModel):
     root: List[RequestOutput]
 
 
@@ -73,14 +73,18 @@ def fit_parameters(input_data):
           some linear algebra and matrix computation. For testing we just
           assume we would have computed these and take fake values instead.
     """
-    first_ints = input_data.arguments[0].ints
+    first_ints = input_data.arguments.root[0].ints
     weights = range(1, len(first_ints) + 1)
 
     # At least make sure the values are correct, although this completely
     # depends on if the test data has been selected correspondingly.
-    for args, obs in zip(input_data.arguments, input_data.observations):
+    for args, obs in zip(
+        input_data.arguments.root, input_data.observations.root
+    ):
         expected_weighted_sum = obs.weighted_sum
         actual_weighted_sum = 0
         for i, weight in zip(args.ints, weights):
             actual_weighted_sum += i * weight
         assert actual_weighted_sum == expected_weighted_sum
+
+    return {"weights": weights}

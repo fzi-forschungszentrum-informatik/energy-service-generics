@@ -19,15 +19,10 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-import asyncio
-from inspect import iscoroutinefunction
 import json
-from unittest.mock import MagicMock
 
 from pydantic import ValidationError
 import pytest
-
-from esg.test.tools import async_return
 
 
 class GenericMessageSerializationTest:
@@ -217,97 +212,111 @@ class GenericMessageSerializationTestBEMcom(GenericMessageSerializationTest):
             assert actual_msg_as_obj == expected_msg_as_obj
 
 
-class GenericServiceMethodTests:
+class GenericWorkerTaskTest:
     """
-    A collection of test methods that should be useful for all
-    product services derived from `esg.services`.
+    Tests for checking that the worker tasks are correctly implemented.
 
     Attributes:
     -----------
-    service : Service class instance.
-        This is the service class to be tested, e.g. `ExampleService()`
-    inputs_jsonable : list of dict (JSONable representation)
-        A list of input objects that `test_process_request_output_correct`
-        uses to validate the `process_request` method.
-    expected_outputs_jsonable : list of dict (JSONable representation)
-        A list of output objects that `test_process_request_output_correct`
-        will expect the `process_request` method to compute.
+    tested_task : method decorated as Celery task.
+        The task that should be tested.
+    input_data_jsonable : list of anything.
+        The JSONable representation of the input data that should be
+        used for testing.
+    output_data_jsonable : list of anything.
+        Similar to `input_data_jsonable` but now to expected output
+        for each item in the input.
     """
 
-    service = None
-    inputs_jsonable = None
-    expected_outputs_jsonable = None
+    task_to_test = None
+    input_data_jsonable = None
+    output_data_jsonable = None
 
-    def call_service_method(self, method, *args, **kwargs):
+    def test_direct_call_possible(self):
         """
-        This is a helper that methods and returns the result, regardless
-        if the message is async or sync.
+        Checks that the worker task logic is working is intended.
         """
-        if iscoroutinefunction(method):
-            result = asyncio.new_event_loop().run_until_complete(
-                method(*args, **kwargs)
-            )
-        else:
-            result = method(*args, **kwargs)
-        return result
+        for i, input_jsonable in enumerate(self.input_data_jsonable):
+            expected_output_jsonable = self.output_data_jsonable[i]
+            input_json = json.dumps(input_jsonable)
+            actual_output_json = self.task_to_test(input_json)
+            actual_output_jsonable = json.loads(actual_output_json)
 
-    def test_post_request_passes_input_data(self):
+            assert actual_output_jsonable == expected_output_jsonable
+
+    def test_sync_call_possible(self):
         """
-        Check that `post_request` passes the input data to the correct
-        function. There is nothing else the method should do.
+        In addition to `test_direct_call_possible` check that the celery
+        stuff works too. This should fail if `task_to_test` is not a valid
+        celery task (as opposed to `test_direct_call_possible` which may work
+        for normal functions too. Credit goes to:
+        https://celery.school/unit-testing-celery-tasks#heading-strategy-3-call-the-task-synchronously
         """
-        service = self.service
-        service.handle_post_request = MagicMock(return_value=async_return())
-        test_input_data = MagicMock()
+        for i, input_jsonable in enumerate(self.input_data_jsonable):
+            expected_output_jsonable = self.output_data_jsonable[i]
+            input_json = json.dumps(input_jsonable)
+            async_result = self.task_to_test.s(input_json).apply()
+            actual_output_json = async_result.get()
+            actual_output_jsonable = json.loads(actual_output_json)
 
-        self.call_service_method(
-            service.post_request, input_data=test_input_data
-        )
+            assert actual_output_jsonable == expected_output_jsonable
 
-        assert service.handle_post_request.called
-        actual_kwargs = service.handle_post_request.call_args.kwargs
-        expected_kwargs = {"input_data": test_input_data}
 
-        assert actual_kwargs == expected_kwargs
+class GenericFOOCTest:
+    """
+    Rudimentary test for the forecasting or optimization component.
 
-    def test_post_request_and_return_result_passes_input_data(self):
+    NOTE: This is very basic, it just checks that the computation is OK, i.e.
+          that the computed output matches the expected output. You likely
+          want to add more sophisticated tests for your forecasting or
+          optimization code.
+
+    Attributes:
+    -----------
+    InputDataModel : Pydantic model
+        The data model used to parse Python data from `input_data_json`.
+    payload_function : function
+        This the forecasting or optimization code that should be tested.
+    OutputDataModel : Pydantic model
+        The data model used to serialize whatever is returned by
+        `payload_function`.
+    input_data_jsonable : list of anything.
+        The JSONable representation of the input data that should be
+        used for testing.
+    output_data_jsonable : list of anything.
+        Similar to `input_data_jsonable` but now to expected output
+        for each item in the input.
+    """
+
+    InputDataModel = None
+    payload_function = None
+    OutputDataModel = None
+    input_data_jsonable = None
+    output_data_jsonable = None
+
+    def get_payload_function(self):
         """
-        Check that `post_request_and_return_result` passes the input data
-        to the correct function. There is nothing else the method should do.
+        Seems that Python doesn't allow us to define `payload_function` as
+        an attribute as Python will else treat as class method and add `self`
+        to the arguments. Hence, each child of this generic test class will
+        need to overload this method to return the actual tested payload
+        function.
         """
-        service = self.service
-        service.handle_post_request_and_return_result = MagicMock(
-            return_value=async_return()
-        )
-        test_input_data = MagicMock()
+        raise NotImplementedError("Overload this method to make the test work")
 
-        self.call_service_method(
-            service.post_request_and_return_result, input_data=test_input_data
-        )
-
-        assert service.handle_post_request_and_return_result.called
-        actual_kwargs = (
-            service.handle_post_request_and_return_result.call_args.kwargs
-        )
-        expected_kwargs = {"input_data": test_input_data}
-
-        assert actual_kwargs == expected_kwargs
-
-    def test_process_request_output_correct(self):
+    def test_output_as_expected(self):
         """
-        Verify that process request computes the intended outputs.
+        Check that the computed outputs match the expected ones.
         """
-        service = self.service
+        payload_function = self.get_payload_function()
+        for i, input_jsonable in enumerate(self.input_data_jsonable):
+            expected_output_jsonable = self.output_data_jsonable[i]
+            input_data = self.InputDataModel.model_validate(input_jsonable)
+            output_data = payload_function(input_data)
+            actual_output = self.OutputDataModel.model_validate(output_data)
+            actual_output_jsonable = actual_output.model_dump()
 
-        test_data = zip(self.inputs_jsonable, self.expected_outputs_jsonable)
-        for input_data_jsonable, expected_output_data_jsonable in test_data:
-            input_data = service.InputData.model_validate(input_data_jsonable)
-            actual_output_data_jsonable = self.call_service_method(
-                method=service.process_request,
-                input_data=input_data,
-            )
-
-            assert actual_output_data_jsonable == expected_output_data_jsonable
+            assert actual_output_jsonable == expected_output_jsonable
 
 
 class GenericEndToEndServiceTests:
@@ -317,6 +326,25 @@ class GenericEndToEndServiceTests:
     This checks some functionality that is not directly defined by
     the Service but it's parent class. It is checked here again for
     those functions that affect the usage of the service.
+
+    TODO: Refactor this!
+            * This should either get an instance of the API or as alternative
+              a URL if the service is online already.
+            * If the API instance is set, it must wrap the API into a process
+              similar to the approach in the api tests.
+            * You need to handle authentication
+            * Add handling of fit parameters.
+            * If fitting is tested you likely need to allow some overloading
+              of the way how it is tested that the values are as expected.
+              I.e. we might only want to check that the output obeys a certain
+              format. You could add two options, one just verifies that the
+              output format is correct, another one checks for specific values.
+            * You might want to add tests that validate that invalid inputs
+              are detected.
+            * This should likely extend some other tests that implement the
+              functionality above, especially regarding IO checking and
+              testing wether the expected results are computed.
+
 
     Attributes:
     -----------

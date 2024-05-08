@@ -17,7 +17,81 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
+import os
+from pathlib import Path
+
+# To prevent tests from failing if only parts of the package are used.
+try:
+    from celery import Celery
+
+except ModuleNotFoundError:
+    Celery = None
+
 from esg.models.base import _BaseModel
+
+
+def celery_app_from_environ():
+    """
+    Instantiates a Celery app with configuration loaded from environment vars.
+
+    NOTE: This is an incomplete set of settings. For a more generic approach
+          you may want to implement something like this approach here:
+          https://celery.school/celery-config-env-vars
+    """
+    name = os.getenv("CELERY__NAME")
+    if not name:
+        raise ValueError(
+            "No name for the celery app defined. Try setting the "
+            "`CELERY__NAME` environment variable to non empty string"
+        )
+
+    # Set some option which seem generally useful for all transport types.
+    generic_useful_options = {
+        # Seems sane to retry the connection, might be that the container
+        # of a potential broker takes longer to boot then the worker.
+        # Besides, if we don't set this explicitly we'll get a super
+        # annoying deprecation warning in the logs. See for details:
+        # https://docs.celeryq.dev/en/stable/userguide/configuration.html#broker-connection-retry-on-startup
+        "broker_connection_retry_on_startup": True,
+    }
+
+    broker_url = os.getenv("CELERY__BROKER_URL")
+    if not broker_url:
+        raise ValueError(
+            "Broker URL not defined. Try setting the "
+            "`CELERY__BROKER_URL` environment variable to non empty string"
+        )
+    elif broker_url == "filesystem://":
+        # The CELERY__FS_TRANSPORT_BASE_FOLDER replaces the need to parse
+        # redundant information for `broker_transport_options` and
+        # `result_backend`
+        base_folder = os.getenv("CELERY__FS_TRANSPORT_BASE_FOLDER")
+        if not base_folder:
+            raise ValueError("CELERY__FS_TRANSPORT_BASE_FOLDER can't be empty.")
+
+        # Create the necessary sub-folders.
+        broker_folder = Path(base_folder) / "broker"
+        broker_folder.mkdir(parents=True, exist_ok=True)
+        results_folder = Path(base_folder) / "results"
+        results_folder.mkdir(parents=True, exist_ok=True)
+
+        app = Celery(
+            name,
+            broker_url="filesystem://",
+            broker_transport_options={
+                "data_folder_in": f"{broker_folder}/",
+                "data_folder_out": f"{broker_folder}/",
+            },
+            result_backend=f"file://{results_folder}/",
+            **generic_useful_options,
+        )
+        return app
+    else:
+        raise ValueError(
+            f'`CELERY__BROKER_URL` set to `"{broker_url}"` which is not '
+            "recognized as valid option by `celery_app_from_environ`. Check "
+            "the source of the function for valid options."
+        )
 
 
 def compute_request_input_model(RequestArguments, FittedParameters=None):
@@ -51,16 +125,14 @@ def compute_request_input_model(RequestArguments, FittedParameters=None):
     return RequestInput
 
 
-def compute_fit_parameters_input_model(
-    FitParametersArguments, FitParametersObservations
-):
+def compute_fit_parameters_input_model(FitParameterArguments, Observations):
     """
     Arguments:
     ----------
-    FitParametersArguments : pydantic model
+    FitParameterArguments : pydantic model
         A model defining the structure of the  arguments that are required
         to fit the parameters.
-    FitParametersObservations : pydantic model
+    Observations : pydantic model
         A model defining the structure of the true observed data used for
         fitting the parameters.
 
@@ -72,31 +144,10 @@ def compute_fit_parameters_input_model(
     """
 
     class FitParametersInput(_BaseModel):
-        arguments: FitParametersArguments
-        observations: FitParametersObservations
+        arguments: FitParameterArguments
+        observations: Observations
 
     return FitParametersInput
-
-
-def compute_fit_parameters_output_model(FittedParameters):
-    """
-    Arguments:
-    ----------
-    FittedParameters : pydantic model
-        A model defining the structure of the fitted parameters required
-        to compute a request.
-
-    Returns:
-    --------
-    FitParametersOutput : pydantic model
-        A Model defining the structure and documentation of the output data
-        emitted by the fit-parameters process.
-    """
-
-    class FitParametersOutput(_BaseModel):
-        parameters: FittedParameters
-
-    return FitParametersOutput
 
 
 def execute_payload(
@@ -136,7 +187,6 @@ def execute_payload(
           later with a functionality that detects if payload_function is
           actually a celery task, in which case we could submit all jobs at
           once and collect the results.
-    TODO: Check the docstrings.
     """
     input_data = InputDataModel.model_validate_json(input_data_json)
     output_data = payload_function(input_data)
@@ -146,7 +196,7 @@ def execute_payload(
     return output_data_json
 
 
-def execute_handle_request(
+def invoke_handle_request(
     input_data_json,
     RequestArguments,
     handle_request_function,
@@ -177,14 +227,58 @@ def execute_handle_request(
     output_data_json : str
         The result serialized as a JSON string.
     """
-    RequestInputModel = compute_request_input_model(
+    InputModel = compute_request_input_model(
         RequestArguments=RequestArguments,
         FittedParameters=FittedParameters,
     )
     output_data_json = execute_payload(
-        InputDataModel=RequestInputModel,
+        InputDataModel=InputModel,
         input_data_json=input_data_json,
         payload_function=handle_request_function,
         OutputDataModel=RequestOutput,
+    )
+    return output_data_json
+
+
+def invoke_fit_parameters(
+    input_data_json,
+    FitParameterArguments,
+    Observations,
+    fit_parameters_function,
+    FittedParameters,
+):
+    """
+    Invoke `execute_payload` but with models adapted for the request case.
+
+    Arguments:
+    ----------
+    input_data_json : str
+        The input data for `handle_request_function`, not parsed yet.
+    FitParameterArguments : pydantic model
+        A model defining the structure of the  arguments that are required
+        to fit the parameters.
+    Observations : pydantic model
+        A model defining the structure of the true observed data used for
+        fitting the parameters.
+    fit_parameters_function : function
+        This the code that fits the parameters that should be executed
+        by the worker.
+    FittedParameters : pydantic model
+        A model defining the structure of the fitted parameters required
+        to compute a request.
+
+    Returns:
+    --------
+    output_data_json : str
+        The result serialized as a JSON string.
+    """
+    InputModel = compute_fit_parameters_input_model(
+        FitParameterArguments=FitParameterArguments, Observations=Observations
+    )
+    output_data_json = execute_payload(
+        InputDataModel=InputModel,
+        input_data_json=input_data_json,
+        payload_function=fit_parameters_function,
+        OutputDataModel=FittedParameters,
     )
     return output_data_json

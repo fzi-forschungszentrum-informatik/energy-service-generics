@@ -21,34 +21,30 @@ from packaging.version import Version
 
 from esg.service.api import API
 
-from data_model import RequestInput
-from data_model import RequestOutput
-from worker import request_task
+from data_model import RequestArguments, RequestOutput
+from data_model import FittedParameters, Observations
+from data_model import FitParameterArguments
+from worker import request_task, fit_parameters_task
 
-
-class MinimalViableServiceAPI(API):
-    """
-    Specify input and output data formats and extend the SwaggerUI page
-    with documentation about the service.
-    """
-
-    def __init__(self):
-        super().__init__(
-            RequestInput=RequestInput,
-            RequestOutput=RequestOutput,
-            request_task=request_task,
-            title="Minimal Viable Service",
-            description=(
-                "This service is only intended for development of the package "
-                "and allows to verify interactively how changes in the source "
-                "code affect a service, which is particularly important for "
-                "code segments that are hard to test, like e.g. related to "
-                "the interactive documentation."
-            ),
-            version=Version("0.0.1"),
-        )
-
+api = API(
+    RequestArguments=RequestArguments,
+    RequestOutput=RequestOutput,
+    request_task=request_task,
+    title="Minimal Viable Service",
+    version=Version("0.0.1"),
+    FitParameterArguments=FitParameterArguments,
+    FittedParameters=FittedParameters,
+    Observations=Observations,
+    fit_parameters_task=fit_parameters_task,
+    description=(
+        "This service is only intended for development of the package "
+        "and allows to verify interactively how changes in the source "
+        "code affect a service, which is particularly important for "
+        "code segments that are hard to test, like e.g. related to "
+        "the interactive documentation. To this end it implements a "
+        "super simple 1D linear regression."
+    ),
+)
 
 if __name__ == "__main__":
-    api = MinimalViableServiceAPI()
     api.run()

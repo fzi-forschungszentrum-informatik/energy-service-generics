@@ -19,27 +19,152 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
+import os
 import json
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import ValidationError
 import pytest
+from unittest.mock import patch
+from tempfile import TemporaryDirectory
 from typing import List
 
+# To prevent tests from failing if only parts of the package are used.
+try:
+    from celery import Celery
+
+    service_extra_not_installed = False
+except ModuleNotFoundError:
+    Celery = None
+    service_extra_not_installed = True
+
 from esg.models.base import _BaseModel
+from esg.service.worker import celery_app_from_environ
 from esg.service.worker import compute_request_input_model
 from esg.service.worker import compute_fit_parameters_input_model
-from esg.service.worker import compute_fit_parameters_output_model
 from esg.service.worker import execute_payload
-from esg.service.worker import execute_handle_request
+from esg.service.worker import invoke_handle_request
+from esg.service.worker import invoke_fit_parameters
 
 from data_model import FittedParameters
-from data_model import FitParametersArguments
-from data_model import FitParametersObservations
+from data_model import FitParameterArguments
+from data_model import Observations
 from data_model import fit_parameters
 from data_model import handle_request
 from data_model import RequestArguments
 from data_model import RequestOutput
+
+
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
+class TestCeleryAppFromEnviron:
+    """
+    Tests for `esg.service.worker.celery_app_from_environ`.
+    """
+
+    def test_no_name_raises(self):
+        """
+        Celery must have a name to prevent clashes if several services use the
+        same transport.
+        """
+        with patch.dict(os.environ, {}):
+            with pytest.raises(ValueError) as exc_info:
+                celery_app_from_environ()
+
+            assert "CELERY__NAME" in str(exc_info.value)
+
+    def test_empty_fs_folder_raises(self):
+        """
+        Can't have a filesystem transport if the corresponding folder is not
+        created.
+        """
+        test_environ = {
+            "CELERY__NAME": "test",
+            "CELERY__BROKER_URL": "filesystem://",
+        }
+        with patch.dict(os.environ, test_environ):
+            with pytest.raises(ValueError) as exc_info:
+                celery_app_from_environ()
+            assert "CELERY__FS_TRANSPORT_BASE_FOLDER" in str(exc_info.value)
+
+    def test_empty_broker_url_raises(self):
+        """
+        The broker URL is THE variable on which the app is configured. Thus,
+        it can't be empty.
+        """
+        test_environ = {
+            "CELERY__NAME": "test",
+        }
+        with patch.dict(os.environ, test_environ):
+            with pytest.raises(ValueError) as exc_info:
+                celery_app_from_environ()
+            assert "CELERY__BROKER_URL" in str(exc_info.value)
+
+    def test_unknown_broker_url_raises(self):
+        """
+        The broker URL is THE variable on which the app is configured. Thus,
+        it must take one of the well defined values.
+        """
+        test_environ = {
+            "CELERY__NAME": "test",
+            "CELERY__BROKER_URL": "definitely not supported",
+        }
+        with patch.dict(os.environ, test_environ):
+            with pytest.raises(ValueError) as exc_info:
+                celery_app_from_environ()
+            assert "CELERY__BROKER_URL" in str(exc_info.value)
+
+    @staticmethod
+    def verify_generic_options_in_app(app):
+        """
+        Prevents redundant code by allowing several functions to check if the
+        `generic_useful_options` have been forwarded to the Celery app.
+        """
+        assert app.conf.broker_connection_retry_on_startup is True
+
+    def test_fs_transport_creates_folders_and_returns_app(self):
+        """
+        This is the desired aspect for filesystem transport, that the folders
+        are created and the app configured.
+        """
+        with TemporaryDirectory() as tmp_dir:
+
+            # Check that the folders exist not yet
+            tmp_dir_path = Path(tmp_dir)
+            broker_path = tmp_dir_path / "broker"
+            results_path = tmp_dir_path / "results"
+            assert broker_path.is_dir() is False
+            assert results_path.is_dir() is False
+
+            test_environ = {
+                "CELERY__NAME": "test_name",
+                "CELERY__BROKER_URL": "filesystem://",
+                "CELERY__FS_TRANSPORT_BASE_FOLDER": tmp_dir,
+            }
+            with patch.dict(os.environ, test_environ):
+                app = celery_app_from_environ()
+
+            # Check that the folders have been created.
+            assert broker_path.is_dir()
+            assert results_path.is_dir()
+
+            # Check that we have received a Celery app.
+            assert isinstance(app, Celery)
+
+            # Check that the expected settings have been set.
+            assert app.main == "test_name"
+            assert app.conf.broker_url == "filesystem://"
+            assert app.conf.broker_transport_options == {
+                "data_folder_in": f"{broker_path}/",
+                "data_folder_out": f"{broker_path}/",
+            }
+            assert app.conf.result_backend == f"file://{results_path}/"
+
+            # Finally, check for the generic options.
+            self.verify_generic_options_in_app(app)
 
 
 class TestComputeRequestInputModel:
@@ -95,37 +220,14 @@ class TestComputeFitParametersInputModel:
         """
 
         class FitParametersInput(_BaseModel):
-            arguments: FitParametersArguments
-            observations: FitParametersObservations
+            arguments: FitParameterArguments
+            observations: Observations
 
         expected_schema = FitParametersInput.model_json_schema()
 
         ActualModel = compute_fit_parameters_input_model(
-            FitParametersArguments=FitParametersArguments,
-            FitParametersObservations=FitParametersObservations,
-        )
-        actual_schema = ActualModel.model_json_schema()
-
-        assert actual_schema == expected_schema
-
-
-class TestComputeFitParametersOutputModel:
-    """
-    Tests for `esg.service.worker.compute_fit_parameters_output_model`.
-    """
-
-    def test_model_correct(self):
-        """
-        Check that the model is correct for the standard case.
-        """
-
-        class FitParametersOutput(_BaseModel):
-            parameters: FittedParameters
-
-        expected_schema = FitParametersOutput.model_json_schema()
-
-        ActualModel = compute_fit_parameters_output_model(
-            FittedParameters=FittedParameters,
+            FitParameterArguments=FitParameterArguments,
+            Observations=Observations,
         )
         actual_schema = ActualModel.model_json_schema()
 
@@ -203,20 +305,20 @@ class TestExecutePayload:
             )
 
 
-class TestExecuteHandleRequest:
+class TestInvokeHandleRequest:
     """
-    Tests for `esg.service.worker.execute_handle_request`
+    Tests for `esg.service.worker.invoke_handle_request`
     """
 
     def test_without_parameters(self):
         """
-        Test `execute_handle_request` with a practical example. The edge
+        Test `invoke_handle_request` with a practical example. The edge
         cases should already be handled by the tests for `execute_payload`.
         """
         input_data_json = json.dumps({"arguments": {"ints": [1, 2, 3, 4]}})
         expected_output_data_jsonable = {"weighted_sum": 10}
 
-        actual_output_data_json = execute_handle_request(
+        actual_output_data_json = invoke_handle_request(
             input_data_json=input_data_json,
             RequestArguments=RequestArguments,
             handle_request_function=handle_request,
@@ -228,7 +330,7 @@ class TestExecuteHandleRequest:
 
     def test_with_parameters(self):
         """
-        Test `execute_handle_request` with a practical example. The edge
+        Test `invoke_handle_request` with a practical example. The edge
         cases should already be handled by the tests for `execute_payload`.
         """
         input_data_json = json.dumps(
@@ -239,7 +341,7 @@ class TestExecuteHandleRequest:
         )
         expected_output_data_jsonable = {"weighted_sum": 12}
 
-        actual_output_data_json = execute_handle_request(
+        actual_output_data_json = invoke_handle_request(
             input_data_json=input_data_json,
             RequestArguments=RequestArguments,
             FittedParameters=FittedParameters,
@@ -251,9 +353,30 @@ class TestExecuteHandleRequest:
         assert actual_output_data_jsonable == expected_output_data_jsonable
 
 
-class TestExecuteFitParameters:
+class TestInvokeFitParameters:
     """
-    Tests for `esg.service.worker.execute_fit_parameters`
+    Tests for `esg.service.worker.invoke_fit_parameters`
+    """
 
-    TODO !
-    """
+    def test_fit_called(self):
+        """
+        Test `invoke_fit_parameters` with a practical example. The edge
+        cases should already be handled by the tests for `execute_payload`.
+        """
+        input_data_json = json.dumps(
+            {
+                "arguments": [{"ints": [1, 2, 3, 4]}, {"ints": [6, 7, 8, 9]}],
+                "observations": [{"weighted_sum": 30}, {"weighted_sum": 80}],
+            },
+        )
+        expected_output_data_jsonable = {"weights": [1, 2, 3, 4]}
+        actual_output_data_json = invoke_fit_parameters(
+            input_data_json=input_data_json,
+            FitParameterArguments=FitParameterArguments,
+            Observations=Observations,
+            fit_parameters_function=fit_parameters,
+            FittedParameters=FittedParameters,
+        )
+        actual_output_data_jsonable = json.loads(actual_output_data_json)
+
+        assert actual_output_data_jsonable == expected_output_data_jsonable
