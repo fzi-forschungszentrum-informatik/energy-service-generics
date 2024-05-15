@@ -679,11 +679,8 @@ class TestApiValidateJwt:
 
     def test_endpoints_protected(self, openid_like_test_idp):
         """
-        Check that the endpoints are protected, this test is especially
-        important as `validate_jwt` is not responsible for rejecting requests
-        without a JWT, this is done automatically by FastAPI as we depend
-        on a OpenIdConnect instance. However, it might not be obvious in future
-        how crucial this dependency is, hence we check it here explicitly.
+        Check that the endpoints are protected, i.e. that calls without
+        a header are rejected.
         """
 
         test_issuer = openid_like_test_idp[1]
@@ -696,7 +693,7 @@ class TestApiValidateJwt:
         with patch.dict(os.environ, envs):
             with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
                 self.call_and_check_status_code(
-                    base_url_root, expected_status_code=403
+                    base_url_root, expected_status_code=401
                 )
 
     def test_valid_token_accepted(self, openid_like_test_idp):
