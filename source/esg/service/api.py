@@ -21,17 +21,22 @@ SPDX-License-Identifier: Apache-2.0
 
 import os
 import sys
+import json
 import logging
+from unittest.mock import patch
 from uuid import UUID
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi import FastAPI
+from fastapi import Header
 from fastapi import HTTPException
 from fastapi import Request
 from fastapi import status
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import Response
 from fastapi.security.open_id_connect_url import OpenIdConnect
+from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 
 # To prevent tests from failing if only parts of the package are used.
@@ -53,6 +58,7 @@ from esg.models.task import TaskStatus
 from esg.service.exceptions import GenericUnexpectedException
 from esg.service.worker import compute_fit_parameters_input_model
 from esg.service.worker import compute_request_input_model
+from esg.utils.jwt import AccessTokenChecker
 
 
 # Map the built in states of celery to the state definitions of service
@@ -243,12 +249,6 @@ class API:
         the services are environment variables, e.g. the log level or
         credentials.
 
-        TODO: Add JWT Checking as global dependency to app. See here:
-              https://github.com/tiangolo/fastapi/blob/ab22b795903bb9a782ccfc3d2b4e450b565f6bfc/fastapi/applications.py#L332
-              https://pyjwt.readthedocs.io/en/latest/usage.html
-
-        TODO: Change arguments of method to match the example code.
-
         Environment variables:
         ----------------------
         LOGLEVEL : str
@@ -259,6 +259,23 @@ class API:
             `ROOT_PATH` to `"/service-1/v1/"`. Note that by convention we
             require the last element of the root path to contain the major
             part of the version number.
+        AUTH_JWT_ISSUER : str
+            The service will only allow access with a valid JWT token
+            if this variable is set. Corresponds to `expected_issuer`
+            argument of `esg.utils.jwt.AccessTokenChecker`. See docstring
+            there for details.
+        AUTH_JWT_AUDIENCE : str
+            Only used if `AUTH_JWT_ISSUER` is set. Corresponds to
+            `expected_audience` argument of `esg.utils.jwt.AccessTokenChecker`.
+            See docstring there for details.
+        AUTH_JWT_ROLE_CLAIM : list of str as JSON encoded str
+            Only used if `AUTH_JWT_ISSUER` is set. Corresponds to
+            `expected_role_claim` arg of `esg.utils.jwt.AccessTokenChecker`.
+            See docstring there for details.
+        AUTH_JWT_ROLES : list of str as JSON encoded str
+            Only used if `AUTH_JWT_ISSUER` is set. Corresponds to
+            `expected_roles` argument of `esg.utils.jwt.AccessTokenChecker`.
+            See docstring there for details.
 
         Arguments:
         ----------
@@ -380,13 +397,59 @@ class API:
                 self.FitParametersInput
             )
 
-        # TODO: Rework this, just a tester yet.
-        # The FastAPI docs are not very complete here. This was found here:
-        # https://github.com/HarryMWinters/fastapi-oidc/issues/1
-        # self.fastapi_oauth2 = OpenIdConnect(
-        #     openIdConnectUrl="<the well known URL>",
-        #     scheme_name="My Authentication Method",
-        # )
+        # Set up Authentication and Authorization if requested.
+        jwt_issuer = os.getenv("AUTH_JWT_ISSUER") or None
+        if jwt_issuer is not None:
+            jwt_audience = os.getenv("AUTH_JWT_AUDIENCE")
+            jwt_role_claim = json.loads(
+                os.getenv("AUTH_JWT_ROLE_CLAIM") or "null"
+            )
+            jwt_roles = json.loads(os.getenv("AUTH_JWT_ROLES") or "null")
+
+            self.access_token_checker = AccessTokenChecker(
+                expected_issuer=jwt_issuer,
+                expected_audience=jwt_audience,
+                expected_role_claim=jwt_role_claim,
+                expected_roles=jwt_roles,
+            )
+
+            # The FastAPI docs are not very complete here. This was found here:
+            # https://github.com/HarryMWinters/fastapi-oidc/issues/1
+            fastapi_oauth2 = OpenIdConnect(
+                openIdConnectUrl=self.access_token_checker.get_well_known_url(),
+                scheme_name="OpenID Connect Authentication",
+            )
+
+            dependencies = [
+                Depends(self.validate_jwt),
+                Depends(fastapi_oauth2),
+            ]
+
+            # Extend the schema with status code only existing for services
+            # with enabled auth.
+            auth_errors = {
+                401: {
+                    "model": HTTPError,
+                    "description": "Invalid access token provided.",
+                },
+                403: {
+                    "model": HTTPError,
+                    "description": (
+                        "Returned if no access token is provided but the "
+                        "service expects one or if a valid token was provided "
+                        "but lacking the necessary roles to access the service."
+                    ),
+                },
+            }
+            self.post_request_responses.update(auth_errors)
+            self.get_request_status_responses.update(auth_errors)
+            self.get_request_result_responses.update(auth_errors)
+            self.post_fit_parameters_responses.update(auth_errors)
+            self.get_fit_parameters_status_responses.update(auth_errors)
+            self.get_fit_parameters_result_responses.update(auth_errors)
+
+        else:
+            dependencies = None
 
         # General settings for the REST API.
         self.fastapi_app = FastAPIExtendedModels(
@@ -396,10 +459,7 @@ class API:
             redoc_url=None,
             root_path=fastapi_root_path,
             version=str(version),
-            dependencies=[
-                Depends(self.dummy_dependency),
-                # Depends(self.fastapi_oauth2),
-            ],
+            dependencies=dependencies,
             post_body_models_by_path=post_body_models_by_path,
             **fastapi_kwargs,
         )
@@ -454,8 +514,51 @@ class API:
                 tags=["fit-parameters"],
             )(self.get_fit_parameters_result)
 
-    def dummy_dependency(self):
-        print(f"Test: {self.fastapi_app.title}")
+    def validate_jwt(
+        self,
+        request: Request,
+        authorization: Annotated[
+            str | None, Header(include_in_schema=False)
+        ] = None,
+    ):
+        """
+        This checks that the JWT provided by the user is actually valid.
+
+        NOTE: The usual way of getting the token is to Depend on the OIDC
+              schema, see here:
+              https://fastapi.tiangolo.com/tutorial/security/first-steps/
+              However, this is not possible here as the security schema is
+              only defined in `__init__` and can't be accessed as argument
+              of this method. Hence a little workaround.
+        """
+        if not authorization:
+            raise HTTPException(
+                status_code=401,
+                detail="No authorization header in request.",
+            )
+        auth_split = authorization.split("Bearer ")
+        if len(auth_split) < 2:
+            raise HTTPException(
+                status_code=401,
+                detail="No bearer token in authorization header.",
+            )
+        token = auth_split[1]
+
+        try:
+            user_id, granted_roles = self.access_token_checker.check_token(
+                token
+            )
+        except InvalidTokenError as e:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Token validation failed. Error was: {str(e)}",
+            )
+
+        # NOTE: This is super nice for logging but not covered in the tests.
+        request.scope["user_id"] = user_id
+
+        # This might be used in future. It is currently not.
+        request.scope["granted_roles"] = granted_roles
 
     async def post_request(self, request: Request):
         """
@@ -680,6 +783,24 @@ class API:
         """
         pass
 
+    @staticmethod
+    def get_client_addr(scope):
+        """
+        Extend the uvicorn access logs with a user ID, should it exists.
+
+        Extended version that adds a user ID to the access logs. Original code:
+        https://github.com/encode/uvicorn/blob/14ffba8316eb606cd026d1a3b01d9d90e47e868c/uvicorn/protocols/utils.py#L45
+        """
+        client = scope.get("client")
+        if not client:
+            return ""
+
+        user_id = scope.get("user_id")
+        if not user_id:
+            user_id = "Anonymous"
+
+        return "%s:%d" % client + " - %s" % user_id
+
     def run(self):
         """
         Run the FastAPI app with uvicorn.
@@ -692,15 +813,24 @@ class API:
             #     self.fastapi_app, include_in_schema=False
             # )
 
-            # Serve the REST endpoint.
-            # NOTE: uvicorn handles SIGTERM signals for us, that is, this line
-            #       below will block until SIGTERM or SIGINT is received.
-            #       Afterwards the finally statement is executed.
-            uvicorn.run(
-                self.fastapi_app,
-                host="0.0.0.0",
-                port=8800,
-            )
+            # Extends the access log with a username. This patches the uvicorn
+            # function `get_client_addr` used here:
+            # https://github.com/encode/uvicorn/blob/14ffba8316eb606cd026d1a3b01d9d90e47e868c/uvicorn/protocols/http/h11_impl.py#L466
+            # NOTE: This patch here as well as the custom implementation of
+            #       `get_client_addr` are currently not covered in the tests.
+            #       Be extra careful if changing something here.
+            with patch(
+                "uvicorn.protocols.utils.get_client_addr", self.get_client_addr
+            ):
+                # Serve the REST endpoint.
+                # NOTE: uvicorn handles SIGTERM signals for us, that is, this
+                #       line below will block until SIGTERM or SIGINT is
+                #       received. Afterwards the finally statement is executed.
+                uvicorn.run(
+                    self.fastapi_app,
+                    host="0.0.0.0",
+                    port=8800,
+                )
         except Exception:
             self.logger.exception(
                 "Exception encountered while serving the API."

@@ -44,6 +44,12 @@ if REGISTRY is not None:
             REGISTRY.unregister(collector)
 
 
+# Load fixtures located elsewhere too.
+pytest_plugins = [
+    "esg.test.jwt_utils",
+]
+
+
 @pytest.fixture(scope="session")
 def celery_config():
     """

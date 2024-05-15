@@ -99,17 +99,30 @@ class AccessTokenChecker:
         # First fetch the allowed signing algorithms and the endpoint for the
         # public keys from the OpenID Connect Discovery endpoint. See also:
         # https://openid.net/specs/openid-connect-discovery-1_0.html
-        response = requests.get(
-            # NOTE: This path is standardized, see:
-            # https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
-            f"{expected_issuer}/.well-known/openid-configuration"
-        )
+        response = requests.get(self.get_well_known_url())
         response.raise_for_status()
         oidc_config = response.json()
         self.allowed_signing_algorithms = oidc_config[
             "id_token_signing_alg_values_supported"
         ]
         self.jwks_client = jwt.PyJWKClient(oidc_config["jwks_uri"])
+
+    def get_well_known_url(self):
+        """
+        Return the URL of OIDC configuration.
+
+        NOTE: This well known path is standardized, see:
+        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+
+        Returns:
+        --------
+        well_known_url : str
+            The URL under which the OIDC configuration is expected.
+        """
+        well_known_url = (
+            f"{self.expected_issuer}/.well-known/openid-configuration"
+        )
+        return well_known_url
 
     def check_token(self, token):
         """
@@ -162,7 +175,9 @@ class AccessTokenChecker:
             for role_claim_part in self.expected_role_claim:
                 part_of_payload = part_of_payload[role_claim_part]
             roles_in_token = part_of_payload
-        except KeyError:
+        # TypeError for cases if a token contains a string that should be
+        # a dict.
+        except (KeyError, TypeError):
             raise jwt.exceptions.MissingRequiredClaimError(
                 "Could not find `expected_role_claim` "
                 f"({self.expected_role_claim}) in token."

@@ -1,11 +1,6 @@
 """
 Tests for `esg.service.api`
 
-TODO Tests to define:
-* All endpoints are protected by JWT:
-  * Invalid Tokens fail.
-  * Valid Tokens pass.
-
 Copyright 2024 FZI Research Center for Information Technology
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +20,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import os
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 import json
 import logging
@@ -35,9 +31,14 @@ from time import sleep
 from typing import Optional
 
 from fastapi import FastAPI
+import jwt
 from packaging.version import Version
 import pytest
 import requests
+
+from esg.test.jwt_utils import RSA256_KEY
+from esg.test.jwt_utils import RSA256_PRIVATE_KEY
+from esg.test.jwt_utils import INVALID_RSA_PRIVATE_KEY
 
 # To prevent tests from failing if only parts of the package are used.
 try:
@@ -68,7 +69,6 @@ from esg.service.worker import compute_fit_parameters_input_model
 from esg.service.worker import compute_request_input_model
 from esg.service.worker import invoke_handle_request
 from esg.service.worker import invoke_fit_parameters
-from esg.test.tools import TestClassWithFixtures
 
 
 def deep_get(dictionary, *keys):
@@ -177,12 +177,10 @@ def dummy_tasks(celery_session_app, celery_session_worker):
     service_extra_not_installed,
     reason="requires installation with `service` extra.",
 )
-class TestApiInit(TestClassWithFixtures):
+class TestApiInit:
     """
     Tests for `esg.service.api.API.__init__`
     """
-
-    fixture_names = ("caplog",)
 
     def test_environment_variables_loaded(self):
         """
@@ -267,23 +265,23 @@ class TestApiInit(TestClassWithFixtures):
 
         assert api.fastapi_app.root_path == root_path
 
-    def test_logger_available(self):
+    def test_logger_available(self, caplog):
         """
         Verify that it is possible to use the logger of the service to create
         log messages.
         """
         api = API(**API_DEFAULT_KWARGS)
 
-        self.caplog.clear()
+        caplog.clear()
 
         api.logger.info("A test info message")
 
-        records = self.caplog.records
+        records = caplog.records
         assert len(records) == 1
         assert records[0].levelname == "INFO"
         assert records[0].message == "A test info message"
 
-    def test_loglevel_changed(self):
+    def test_loglevel_changed(self, caplog):
         """
         Verify that it is possible to change ot logging level of the logger
         by setting the corresponding environment variable.
@@ -295,14 +293,14 @@ class TestApiInit(TestClassWithFixtures):
         with patch.dict(os.environ, envs):
             api = API(**API_DEFAULT_KWARGS)
 
-        self.caplog.clear()
+        caplog.clear()
 
         # This message should not appear in the log,
         api.logger.info("A test info message")
         # .. while this message should due to LOGLEVEL set to WARNING.
         api.logger.warning("A test warning message")
 
-        records = self.caplog.records
+        records = caplog.records
         assert len(records) == 1
         assert records[0].levelname == "WARNING"
         assert records[0].message == "A test warning message"
@@ -314,6 +312,64 @@ class TestApiInit(TestClassWithFixtures):
         """
         api = API(**API_DEFAULT_KWARGS)
         assert isinstance(api.fastapi_app, FastAPI)
+
+    def test_access_token_checker_created(self, openid_like_test_idp):
+        """
+        Check that the JWT access token checker class is created with the
+        correct arguments.
+        """
+        expected_issuer = openid_like_test_idp[1]
+        expected_audience = "some_client_id"
+        envs = {
+            "AUTH_JWT_ISSUER": expected_issuer,
+            "AUTH_JWT_AUDIENCE": expected_audience,
+        }
+
+        with patch.dict(os.environ, envs):
+            api = API(**API_DEFAULT_KWARGS)
+
+        assert hasattr(api, "access_token_checker")
+        atc = api.access_token_checker
+        assert atc.expected_issuer == expected_issuer
+        assert atc.expected_audience == expected_audience
+        # These two are actually important, they make sure that empty env vars
+        # are handled correctly
+        assert atc.expected_role_claim is None
+        assert atc.expected_roles is None
+
+    def test_access_token_checker_created_roles(self, openid_like_test_idp):
+        """
+        Like `test_access_token_checker_created` but now additionally with
+        roles set.
+        """
+        expected_issuer = openid_like_test_idp[1]
+        expected_audience = "some_client_id"
+        # Something like this can be found in JWTs issued by Keycloak with
+        # default settings.
+        expected_role_claim = [
+            "resource_access",
+            f"{expected_audience}",
+            "roles",
+        ]
+        # The role name as configured in the IDP (e.g. Keycloak) that would
+        # allow accessing the service if role is assigned to a user.
+        expected_roles = ["corresponding-role-of-service"]
+        envs = {
+            "AUTH_JWT_ISSUER": expected_issuer,
+            "AUTH_JWT_AUDIENCE": expected_audience,
+            "AUTH_JWT_ROLE_CLAIM": json.dumps(expected_role_claim),
+            "AUTH_JWT_ROLES": json.dumps(expected_roles),
+        }
+
+        with patch.dict(os.environ, envs):
+            api = API(**API_DEFAULT_KWARGS)
+
+        assert hasattr(api, "access_token_checker")
+        atc = api.access_token_checker
+        assert atc.expected_issuer == expected_issuer
+        assert atc.expected_audience == expected_audience
+        assert atc.expected_role_claim == expected_role_claim
+        assert atc.expected_roles == expected_roles
 
     def test_named_fastapi_args_forwarded(self):
         """
@@ -541,7 +597,7 @@ class APIInProcess:
     def __enter__(self):
         self.process.start()
         # Give uvicorn some time to start up.
-        sleep(0.1)
+        sleep(0.2)
         # Compute the root path of the API.
         root_path = self.api.fastapi_app.root_path
         base_url_root = f"http://localhost:8800{root_path}"
@@ -552,6 +608,317 @@ class APIInProcess:
         # XXX: This is super important, as the next test will else
         #      not be able to spin up the server again.
         self.process.join()
+
+
+class TestApiValidateJwt:
+    """
+    Tests for `esg.service.api.API.validate_jwt`.
+
+    NOTE: This also checks that `validate_jwt` is injected correctly as
+          dependency, although this is part of `API.__init__`. However
+          testing it here is much simpler to implement.
+    """
+
+    def call_and_check_status_code(
+        self, base_url_root, expected_status_code, token=None
+    ):
+        """
+        Calls all endpoints of the API and checks the status codes of the
+        responses.
+
+        Arguments:
+        ----------
+        base_url_root : str
+            The base URL of the API as returned by `APIInProcess`.
+        expected_status_code : int
+            The status code to expect. A request with valid token would
+            get a 422 as the calls do not match the models.
+        token : str
+            If not `None`, will be added as bearer token.
+        """
+        bad_uuid = "000000.000000"
+        if token is not None:
+            headers = {"Authorization": f"Bearer {token}"}
+        else:
+            headers = None
+
+        for endpoint in ["request", "fit-parameters"]:
+            response = requests.post(
+                f"{base_url_root}/{endpoint}/",
+                headers=headers,
+                json={},
+            )
+            assert response.status_code == expected_status_code
+
+            response = requests.get(
+                f"{base_url_root}/{endpoint}/{bad_uuid}/status/",
+                headers=headers,
+            )
+            assert response.status_code == expected_status_code
+
+            response = requests.get(
+                f"{base_url_root}/{endpoint}/{bad_uuid}/result/",
+                headers=headers,
+            )
+            assert response.status_code == expected_status_code
+
+    def _generate_payload(self, issuer, audience, extra=None):
+        """
+        Helper function. Generates the expected content of the JWT.
+        """
+        payload = {
+            "iss": issuer,
+            "aud": [audience],
+            "iat": datetime.now(tz=timezone.utc) - timedelta(seconds=60),
+            "exp": datetime.now(tz=timezone.utc) + timedelta(seconds=60),
+            "sub": "18e72351-7d97-4c56-b593-038be8e00d2b",
+        }
+        if extra is not None:
+            payload.update(extra)
+        return payload
+
+    def test_endpoints_protected(self, openid_like_test_idp):
+        """
+        Check that the endpoints are protected, this test is especially
+        important as `validate_jwt` is not responsible for rejecting requests
+        without a JWT, this is done automatically by FastAPI as we depend
+        on a OpenIdConnect instance. However, it might not be obvious in future
+        how crucial this dependency is, hence we check it here explicitly.
+        """
+
+        test_issuer = openid_like_test_idp[1]
+        test_audience = "some_client_id"
+        envs = {
+            "AUTH_JWT_ISSUER": test_issuer,
+            "AUTH_JWT_AUDIENCE": test_audience,
+        }
+
+        with patch.dict(os.environ, envs):
+            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+                self.call_and_check_status_code(
+                    base_url_root, expected_status_code=403
+                )
+
+    def test_valid_token_accepted(self, openid_like_test_idp):
+        """
+        Check that the access is possible with a valid token.
+        """
+
+        test_issuer = openid_like_test_idp[1]
+        test_audience = "some_client_id"
+        envs = {
+            "AUTH_JWT_ISSUER": test_issuer,
+            "AUTH_JWT_AUDIENCE": test_audience,
+        }
+
+        token = jwt.encode(
+            self._generate_payload(issuer=test_issuer, audience=test_audience),
+            algorithm="RS256",
+            key=RSA256_PRIVATE_KEY,
+            headers={"kid": RSA256_KEY["kid"]},
+        )
+
+        with patch.dict(os.environ, envs):
+            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+                self.call_and_check_status_code(
+                    base_url_root, expected_status_code=422, token=token
+                )
+
+    def test_invalid_tokens_rejected(self, openid_like_test_idp):
+        """
+        Check that access is rejected if tokens are invalid.
+        """
+
+        test_issuer = openid_like_test_idp[1]
+        test_audience = "some_client_id"
+        envs = {
+            "AUTH_JWT_ISSUER": test_issuer,
+            "AUTH_JWT_AUDIENCE": test_audience,
+        }
+
+        invalid_tokens = {
+            "wrong issuer": jwt.encode(
+                self._generate_payload(
+                    issuer="http://google.com", audience=test_audience
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "wrong audience": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer, audience="Nope audiance"
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "wrong signing key": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer, audience=test_audience
+                ),
+                algorithm="RS256",
+                key=INVALID_RSA_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+        }
+
+        with patch.dict(os.environ, envs):
+            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+                for reason_to_fail, invalid_token in invalid_tokens.items():
+                    print(f"Checking token with: {reason_to_fail}")
+                    self.call_and_check_status_code(
+                        base_url_root,
+                        expected_status_code=401,
+                        token=invalid_token,
+                    )
+
+    def test_valid_token_with_roles_accepted(self, openid_like_test_idp):
+        """
+        Check that the access is possible with a valid token if roles are set.
+        """
+        test_issuer = openid_like_test_idp[1]
+        test_audience = "some_client_id"
+        test_role_claim = [
+            "resource_access",
+            f"{test_audience}",
+            "roles",
+        ]
+        test_roles = ["rw"]
+        envs = {
+            "AUTH_JWT_ISSUER": test_issuer,
+            "AUTH_JWT_AUDIENCE": test_audience,
+            "AUTH_JWT_ROLE_CLAIM": json.dumps(test_role_claim),
+            "AUTH_JWT_ROLES": json.dumps(test_roles),
+        }
+
+        token = jwt.encode(
+            self._generate_payload(
+                issuer=test_issuer,
+                audience=test_audience,
+                extra={
+                    "resource_access": {f"{test_audience}": {"roles": ["rw"]}}
+                },
+            ),
+            algorithm="RS256",
+            key=RSA256_PRIVATE_KEY,
+            headers={"kid": RSA256_KEY["kid"]},
+        )
+
+        with patch.dict(os.environ, envs):
+            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+                self.call_and_check_status_code(
+                    base_url_root, expected_status_code=422, token=token
+                )
+
+    def test_invalid_tokens_with_roles_rejected(self, openid_like_test_idp):
+        """
+        Check that access is rejected if tokens are invalid, here for
+        the roles case
+        """
+
+        test_issuer = openid_like_test_idp[1]
+        test_audience = "some_client_id"
+        test_role_claim = [
+            "resource_access",
+            f"{test_audience}",
+            "roles",
+        ]
+        test_roles = ["rw"]
+        envs = {
+            "AUTH_JWT_ISSUER": test_issuer,
+            "AUTH_JWT_AUDIENCE": test_audience,
+            "AUTH_JWT_ROLE_CLAIM": json.dumps(test_role_claim),
+            "AUTH_JWT_ROLES": json.dumps(test_roles),
+        }
+
+        invalid_tokens = {
+            "wrong issuer": jwt.encode(
+                self._generate_payload(
+                    issuer="http://google.com",
+                    audience=test_audience,
+                    extra={
+                        "resource_access": {
+                            f"{test_audience}": {"roles": ["rw"]}
+                        }
+                    },
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "wrong audience": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer,
+                    audience="Nope audiance",
+                    extra={
+                        "resource_access": {
+                            f"{test_audience}": {"roles": ["rw"]}
+                        }
+                    },
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "wrong signing key": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer,
+                    audience=test_audience,
+                    extra={
+                        "resource_access": {
+                            f"{test_audience}": {"roles": ["rw"]}
+                        }
+                    },
+                ),
+                algorithm="RS256",
+                key=INVALID_RSA_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "wrong role": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer,
+                    audience=test_audience,
+                    extra={
+                        "resource_access": {
+                            f"{test_audience}": {"roles": ["r"]}
+                        }
+                    },
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "only part of role claim": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer,
+                    audience=test_audience,
+                    extra={"resource_access": "nope"},
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+            "no role claim at all": jwt.encode(
+                self._generate_payload(
+                    issuer=test_issuer,
+                    audience=test_audience,
+                ),
+                algorithm="RS256",
+                key=RSA256_PRIVATE_KEY,
+                headers={"kid": RSA256_KEY["kid"]},
+            ),
+        }
+
+        with patch.dict(os.environ, envs):
+            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+                for reason_to_fail, invalid_token in invalid_tokens.items():
+                    print(f"Checking token with: {reason_to_fail}")
+                    self.call_and_check_status_code(
+                        base_url_root,
+                        expected_status_code=401,
+                        token=invalid_token,
+                    )
 
 
 @pytest.mark.skipif(
