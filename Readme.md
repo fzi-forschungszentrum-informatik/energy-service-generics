@@ -1,6 +1,6 @@
 # Energy Service Generics
 
-A framework for the implementation of web-services (as well as the corresponding clients) that provide forecasting and optimization algorithms for energy management applications at  scale.
+A framework for the implementation of web-services (as well as the corresponding clients) that provide forecasting and optimization algorithms for energy management applications at scale.
 
 ## Rationale
 
