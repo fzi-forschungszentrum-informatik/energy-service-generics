@@ -610,6 +610,10 @@ class APIInProcess:
         self.process.join()
 
 
+@pytest.mark.skipif(
+    service_extra_not_installed,
+    reason="requires installation with `service` extra.",
+)
 class TestApiValidateJwt:
     """
     Tests for `esg.service.api.API.validate_jwt`.
@@ -1119,14 +1123,14 @@ class TestPostRequest(PostEndpointTests):
                 "loc": ["arguments", "argument_as_float"],
                 "msg": "Field required",
                 "input": {"noFieldInModel": "foo bar"},
-                "url": "https://errors.pydantic.dev/2.7/v/missing",
+                "url": "https://errors.pydantic.dev/2.8/v/missing",
             },
             {
                 "type": "missing",
                 "loc": ["parameters"],
                 "msg": "Field required",
                 "input": {"arguments": {"noFieldInModel": "foo bar"}},
-                "url": "https://errors.pydantic.dev/2.7/v/missing",
+                "url": "https://errors.pydantic.dev/2.8/v/missing",
             },
         ]
     }
@@ -1159,14 +1163,14 @@ class TestPostFitParameters(PostEndpointTests):
                 "loc": ["arguments", "argument_as_float"],
                 "msg": "Field required",
                 "input": {"noFieldInModel": "foo bar"},
-                "url": "https://errors.pydantic.dev/2.7/v/missing",
+                "url": "https://errors.pydantic.dev/2.8/v/missing",
             },
             {
                 "type": "missing",
                 "loc": ["observations"],
                 "msg": "Field required",
                 "input": {"arguments": {"noFieldInModel": "foo bar"}},
-                "url": "https://errors.pydantic.dev/2.7/v/missing",
+                "url": "https://errors.pydantic.dev/2.8/v/missing",
             },
         ]
     }

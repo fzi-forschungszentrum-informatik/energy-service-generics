@@ -21,13 +21,13 @@ IMAGE_TAG_BASE=${1:-latest}
 # NOTE: The builds are in such an order that as much as possible of layers
 #       can be reused to keep build times low.
 docker build --target esg-base -t $IMAGE_NAME:${IMAGE_TAG_BASE} $SOURCE_PATH
-docker run --rm -t $IMAGE_NAME:$IMAGE_TAG_BASE pytest
+docker run --rm -t $IMAGE_NAME:$IMAGE_TAG_BASE pytest /source/energy_service_generics/tests/
 docker build --target esg-service -t $IMAGE_NAME:${IMAGE_TAG_BASE}-service $SOURCE_PATH
-docker run --rm -t $IMAGE_NAME:${IMAGE_TAG_BASE}-service pytest
+docker run --rm -t $IMAGE_NAME:${IMAGE_TAG_BASE}-service pytest /source/energy_service_generics/tests/
 docker build --target esg-pandas -t $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas $SOURCE_PATH
-docker run --rm -t $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas pytest
+docker run --rm -t $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas pytest /source/energy_service_generics/tests/
 docker build --target esg-service-pandas -t $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas $SOURCE_PATH
-docker run --rm -t $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas pytest
+docker run --rm -t $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas pytest /source/energy_service_generics/tests/
 
 printf "\033[0;32m\n" # Make text green
 printf "Success! "

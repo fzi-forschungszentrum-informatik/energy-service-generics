@@ -33,9 +33,15 @@ variables:
 build_and_test_energy_service_generics:
   <<: *docker_jobs_common
   stage: build_and_test
+  rules:
+    - if: '$CI_COMMIT_TAG'
   script:
-    - bash bash build-docker-images.sh $IMAGE_TAG_BASE
+    - sh build-docker-images.sh $IMAGE_TAG_BASE
     # Once all versions of the image are known to be working, push those.
+    - docker image tag energy-service-generics:${IMAGE_TAG_BASE} $IMAGE_NAME:${IMAGE_TAG_BASE}
+    - docker image tag energy-service-generics:${IMAGE_TAG_BASE}-service $IMAGE_NAME:${IMAGE_TAG_BASE}-service
+    - docker image tag energy-service-generics:${IMAGE_TAG_BASE}-pandas $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas
+    - docker image tag energy-service-generics:${IMAGE_TAG_BASE}-service-pandas $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas
     - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}
     - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}-service
     - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas
