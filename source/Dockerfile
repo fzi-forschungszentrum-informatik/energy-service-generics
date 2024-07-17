@@ -16,7 +16,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Base image for tag x.y.z
-FROM python:3.11 as esg-base
+FROM python:3.11 AS esg-base
 
 # Install the auto-pytest tool incl. dependencies.
 RUN apt-get update && \
@@ -46,7 +46,7 @@ COPY esg/service/dummy_fooc.py /source/service/fooc.py
 
 # Extended image for tag x.y.z-service
 # Contains the additional dependencies to run a service.
-FROM esg-base as esg-service
+FROM esg-base AS esg-service
 
 RUN pip install /source/energy_service_generics[service]
 
@@ -54,7 +54,7 @@ RUN pip install /source/energy_service_generics[service]
 
 # Extended image for tag x.y.z-pandas
 # Contains pandas -> allows the usage of esg.utils.pandas
-FROM esg-base as esg-pandas
+FROM esg-base AS esg-pandas
 
 RUN pip install /source/energy_service_generics[pandas]
 
@@ -63,6 +63,6 @@ RUN pip install /source/energy_service_generics[pandas]
 # Contains pandas, allows the usage of esg.utils.pandas
 # This starts from the pandas stage as installing pandas will likely
 # take longer then the dependencies of the service.
-FROM esg-pandas as esg-service-pandas
+FROM esg-pandas AS esg-service-pandas
 
 RUN pip install /source/energy_service_generics[service,pandas]
