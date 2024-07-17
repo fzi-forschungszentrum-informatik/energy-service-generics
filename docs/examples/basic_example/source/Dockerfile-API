@@ -1,4 +1,4 @@
-FROM energy_service_generics:latest-service
+FROM energy-service-generics:latest-service
 
 COPY ./service/api.py ./service/data_model.py ./service/worker.py /source/service/
 

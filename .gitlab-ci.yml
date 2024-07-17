@@ -1,0 +1,64 @@
+stages:
+  # NOTE: Build and test are one stage to prevent the pipeline from pushing
+  # inoperational images to the registry. Besides it should be more efficient
+  # As the images doesn't need to be pushed and fetched again.
+  - build_and_test
+  - update_latest
+
+# Generic variables, here as those in *docker_jobs_common will be overwritten.
+variables:
+  # These variables are used in the scripts.
+  IMAGE_NAME: $CI_REGISTRY/$CI_PROJECT_PATH
+  IMAGE_TAG_BASE: $CI_COMMIT_REF_NAME
+  # These are required to allow communication with the DIND container.
+  DOCKER_HOST: tcp://dockerhost:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay
+
+# Generic code for jobs executing docker commands.
+.docker_jobs_common: &docker_jobs_common
+  rules:
+    - changes:
+        paths:
+          - source/**/*
+          - .gitlab-ci.yml
+    - if: '$CI_COMMIT_TAG'
+  image: $RUNNER_DOCKER_IMAGE
+  services:
+    - name: $RUNNER_DIND_IMAGE
+      alias: dockerhost
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+
+build_and_test_energy_service_generics:
+  <<: *docker_jobs_common
+  stage: build_and_test
+  script:
+    - bash bash build-docker-images.sh $IMAGE_TAG_BASE
+    # Once all versions of the image are known to be working, push those.
+    - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}
+    - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}-service
+    - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas
+    - docker push $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas
+
+
+update_latest_energy_service_generics:
+  <<: *docker_jobs_common
+  stage: update_latest
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  script:
+    # Tag all previously images as latest if they got a git tag.
+    - docker pull $IMAGE_NAME:${IMAGE_TAG_BASE}
+    - docker pull $IMAGE_NAME:${IMAGE_TAG_BASE}-service
+    - docker pull $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas
+    - docker pull $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas
+    - docker image tag $IMAGE_NAME:${IMAGE_TAG_BASE} $IMAGE_NAME:latest
+    - docker image tag $IMAGE_NAME:${IMAGE_TAG_BASE}-service $IMAGE_NAME:latest-service
+    - docker image tag $IMAGE_NAME:${IMAGE_TAG_BASE}-pandas $IMAGE_NAME:latest-pandas
+    - docker image tag $IMAGE_NAME:${IMAGE_TAG_BASE}-service-pandas $IMAGE_NAME:latest-service-pandas
+    - docker push $IMAGE_NAME:latest
+    - docker push $IMAGE_NAME:latest-service
+    - docker push $IMAGE_NAME:latest-pandas
+    - docker push $IMAGE_NAME:latest-service-pandas
+

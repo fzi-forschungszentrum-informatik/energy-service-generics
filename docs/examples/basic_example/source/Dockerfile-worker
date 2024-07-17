@@ -1,4 +1,4 @@
-FROM energy_service_generics:latest-service-pandas
+FROM energy-service-generics:latest-service-pandas
 
 RUN pip install pvlib scipy
 COPY ./service/ /source/service/

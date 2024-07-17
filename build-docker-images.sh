@@ -8,7 +8,7 @@
 # bash build-docker-images.sh 0.1.0
 set -euo pipefail
 
-IMAGE_NAME="energy_service_generics"
+IMAGE_NAME="energy-service-generics"
 SOURCE_PATH="./source"
 IMAGE_TAG_BASE=${1:-latest}
 

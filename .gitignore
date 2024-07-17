@@ -2,8 +2,8 @@
 control/
 
 -------------------------
-Standard python .gitignore below this line. Taken from here:
-https://github.com/github/gitignore/blob/main/Python.gitignore
+# Standard python .gitignore below this line. Taken from here:
+# https://github.com/github/gitignore/blob/main/Python.gitignore
 
 
 # Byte-compiled / optimized / DLL files
