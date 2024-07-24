@@ -89,6 +89,7 @@ def test_predict_pw_power():
                 pd.Timestamp("2017-04-01 12:00:00-0700", tz="US/Arizona"),
                 pd.Timestamp("2017-04-01 13:00:00-0700", tz="US/Arizona"),
             ],
+            # Has been computed with checked inputs by pvlib.
             data=[187.42544617515875, 186.28669899250573],
         )
         / 290
@@ -110,7 +111,9 @@ def test_predict_pw_power():
         peak_power=2.5,
         meteo_data=meteo_data,
     )
-    pd.testing.assert_series_equal(actual_power, expected_power)
+    # Allow some slight deviations as pvlib updates seem to affect the
+    # computed numbers a bit.
+    pd.testing.assert_series_equal(actual_power, expected_power, rtol=0.005)
 
 
 def test_fetch_meteo_data(open_meteo_httpserver):
