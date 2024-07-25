@@ -32,10 +32,10 @@ from data_model import RequestOutput
 from data_model import FitParameterArguments
 from data_model import Observations
 from fooc import handle_request, fit_parameters
-from .data import REQUEST_INPUT_SAMPLES
-from .data import REQUEST_OUTPUT_SAMPLES
-from .data import FIT_PARAMETERS_INPUT_SAMPLES
-from .data import FIT_PARAMETERS_OUTPUT_SAMPLES
+from .data import REQUEST_INPUTS_FOOC_TEST
+from .data import REQUEST_OUTPUTS_FOOC_TEST
+from .data import FIT_PARAM_INPUTS_FOOC_TEST
+from .data import FIT_PARAM_OUTPUTS_FOOC_TEST
 
 RequestInput = compute_request_input_model(
     RequestArguments=RequestArguments,
@@ -46,8 +46,8 @@ RequestInput = compute_request_input_model(
 class TestHandleRequest(GenericFOOCTest):
     InputDataModel = RequestInput
     OutputDataModel = RequestOutput
-    input_data_jsonable = [m["JSONable"] for m in REQUEST_INPUT_SAMPLES]
-    output_data_jsonable = [m["JSONable"] for m in REQUEST_OUTPUT_SAMPLES]
+    input_data_jsonable = [m["JSONable"] for m in REQUEST_INPUTS_FOOC_TEST]
+    output_data_jsonable = [m["JSONable"] for m in REQUEST_OUTPUTS_FOOC_TEST]
 
     def get_payload_function(self):
         return handle_request
@@ -62,10 +62,8 @@ FitParametersInput = compute_fit_parameters_input_model(
 class TestFitParameters(GenericFOOCTest):
     InputDataModel = FitParametersInput
     OutputDataModel = FittedParameters
-    input_data_jsonable = [m["JSONable"] for m in FIT_PARAMETERS_INPUT_SAMPLES]
-    output_data_jsonable = [
-        m["JSONable"] for m in FIT_PARAMETERS_OUTPUT_SAMPLES
-    ]
+    input_data_jsonable = [m["JSONable"] for m in FIT_PARAM_INPUTS_FOOC_TEST]
+    output_data_jsonable = [m["JSONable"] for m in FIT_PARAM_OUTPUTS_FOOC_TEST]
 
     def get_payload_function(self):
         return fit_parameters

@@ -19,8 +19,9 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-# Valid input data for the request endpoint.
-REQUEST_INPUT_SAMPLES = [
+# Valid input data that can be used to to check the forecasting or optimization
+# code (as well as the worker).
+REQUEST_INPUTS_FOOC_TEST = [
     {
         "Python": {"arguments": {"x": [0.5, 3, 6]}, "parameters": {"w": 0.5}},
         # NOTE: No difference to Python as no data types included that JSON
@@ -29,9 +30,9 @@ REQUEST_INPUT_SAMPLES = [
     }
 ]
 
-# Output expected if data from `REQUEST_INPUT_SAMPLES` is used to compute a
-# request task
-REQUEST_OUTPUT_FOR_INPUT_SAMPLES = [
+# Expected output if if items defined in `REQUEST_INPUT_FOOC_TEST` are
+# provided to the forecasting optimization code (or the worker).
+REQUEST_OUTPUTS_FOOC_TEST = [
     {
         "Python": {"f": [0.25, 1.5, 3]},
         # NOTE: No difference to Python as no data types included that JSON
@@ -40,12 +41,20 @@ REQUEST_OUTPUT_FOR_INPUT_SAMPLES = [
     }
 ]
 
-# Valid output data for the request endpoint.
-# Might want to add additional examples for testing the data models.
-REQUEST_OUTPUT_SAMPLES = [] + REQUEST_OUTPUT_FOR_INPUT_SAMPLES
+# Valid input and output data that should _not_ be used while testing the
+# forecasting or optimization code _but only_ for testing the data models.
+# This could be useful in case that running the forecasting or optimization
+# code is slow or needs mocking, e.g. for data sources. The latter especially,
+# as providing realistic data as mock for all cases might cause large efforts.
+#
+# NOTE: In this example we add no additional test data beyond what is defined
+#       in for `FOOC_TESTING` as the data models are super simple.
+REQUEST_INPUTS_MODEL_TEST = REQUEST_INPUTS_FOOC_TEST + []
+
+REQUEST_OUTPUTS_MODEL_TEST = REQUEST_OUTPUTS_FOOC_TEST + []
 
 # Input data which the request endpoint should reject.
-INVALID_REQUEST_INPUT_SAMPLES = [
+INVALID_REQUEST_INPUTS = [
     # No arguments
     {
         "JSONable": {"parameters": {"w": 0.5}},
@@ -68,7 +77,7 @@ INVALID_REQUEST_INPUT_SAMPLES = [
 ]
 
 # Output data which output model should reject.
-INVALID_REQUEST_OUTPUT_SAMPLES = [
+INVALID_REQUEST_OUTPUTS = [
     # No return value.
     {
         "JSONable": None,
@@ -83,8 +92,9 @@ INVALID_REQUEST_OUTPUT_SAMPLES = [
     },
 ]
 
-# Valid input data for the fit-parameters endpoint.
-FIT_PARAMETERS_INPUT_SAMPLES = [
+# Test data for the fit parameter endpoints corresponding to the concept
+# used for the request endpoint as explained above.
+FIT_PARAM_INPUTS_FOOC_TEST = [
     {
         "Python": {
             "arguments": {"x": [0.5, 6, 6]},
@@ -99,9 +109,7 @@ FIT_PARAMETERS_INPUT_SAMPLES = [
     }
 ]
 
-# Output expected if data from `FIT_PARAMETERS_INPUT_SAMPLES` is used to
-# compute a fit-parameters task
-FIT_PARAMETERS_OUTPUT_FOR_INPUT_SAMPLES = [
+FIT_PARAM_OUTPUTS_FOOC_TEST = [
     {
         "Python": {"w": 0.5},
         # NOTE: No difference to Python as no data types included that JSON
@@ -110,12 +118,11 @@ FIT_PARAMETERS_OUTPUT_FOR_INPUT_SAMPLES = [
     }
 ]
 
-# Valid output data for the fit-parameters endpoint.
-# Might want to add additional examples for testing the data models.
-FIT_PARAMETERS_OUTPUT_SAMPLES = [] + FIT_PARAMETERS_OUTPUT_FOR_INPUT_SAMPLES
+FIT_PARAM_INPUTS_MODEL_TEST = FIT_PARAM_INPUTS_FOOC_TEST + []
 
-# Input data which the request endpoint should reject.
-INVALID_FIT_PARAMETERS_INPUT_SAMPLES = [
+FIT_PARAM_OUTPUTS_MODEL_TEST = FIT_PARAM_OUTPUTS_FOOC_TEST + []
+
+INVALID_FIT_PARAM_INPUTS = [
     # No arguments
     {
         "JSONable": {"observations": {"y": [0.5, 1.5, 2.75]}},
@@ -140,8 +147,7 @@ INVALID_FIT_PARAMETERS_INPUT_SAMPLES = [
     },
 ]
 
-# Output data which output model should reject.
-INVALID_FIT_PARAMETERS_OUTPUT_SAMPLES = [
+INVALID_FIT_PARAM_OUTPUTS = [
     # No return value.
     {
         "JSONable": None,

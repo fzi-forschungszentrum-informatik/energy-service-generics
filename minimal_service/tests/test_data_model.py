@@ -28,14 +28,14 @@ from data_model import FittedParameters
 from data_model import RequestOutput
 from data_model import FitParameterArguments
 from data_model import Observations
-from .data import REQUEST_INPUT_SAMPLES
-from .data import INVALID_REQUEST_INPUT_SAMPLES
-from .data import REQUEST_OUTPUT_SAMPLES
-from .data import INVALID_REQUEST_OUTPUT_SAMPLES
-from .data import FIT_PARAMETERS_INPUT_SAMPLES
-from .data import INVALID_FIT_PARAMETERS_INPUT_SAMPLES
-from .data import FIT_PARAMETERS_OUTPUT_SAMPLES
-from .data import INVALID_FIT_PARAMETERS_OUTPUT_SAMPLES
+from .data import REQUEST_INPUTS_MODEL_TEST
+from .data import REQUEST_OUTPUTS_MODEL_TEST
+from .data import INVALID_REQUEST_INPUTS
+from .data import INVALID_REQUEST_OUTPUTS
+from .data import FIT_PARAM_INPUTS_MODEL_TEST
+from .data import FIT_PARAM_OUTPUTS_MODEL_TEST
+from .data import INVALID_FIT_PARAM_INPUTS
+from .data import INVALID_FIT_PARAM_OUTPUTS
 
 
 RequestInput = compute_request_input_model(
@@ -50,11 +50,9 @@ class TestRequestInput(GenericMessageSerializationTest):
     """
 
     ModelClass = RequestInput
-    msgs_as_python = [m["Python"] for m in REQUEST_INPUT_SAMPLES]
-    msgs_as_jsonable = [m["JSONable"] for m in REQUEST_INPUT_SAMPLES]
-    invalid_msgs_as_jsonable = [
-        m["JSONable"] for m in INVALID_REQUEST_INPUT_SAMPLES
-    ]
+    msgs_as_python = [m["Python"] for m in REQUEST_INPUTS_MODEL_TEST]
+    msgs_as_jsonable = [m["JSONable"] for m in REQUEST_INPUTS_MODEL_TEST]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in INVALID_REQUEST_INPUTS]
 
 
 class TestRequestOutput(GenericMessageSerializationTest):
@@ -63,11 +61,9 @@ class TestRequestOutput(GenericMessageSerializationTest):
     """
 
     ModelClass = RequestOutput
-    msgs_as_python = [m["Python"] for m in REQUEST_OUTPUT_SAMPLES]
-    msgs_as_jsonable = [m["JSONable"] for m in REQUEST_OUTPUT_SAMPLES]
-    invalid_msgs_as_jsonable = [
-        m["JSONable"] for m in INVALID_REQUEST_OUTPUT_SAMPLES
-    ]
+    msgs_as_python = [m["Python"] for m in REQUEST_OUTPUTS_MODEL_TEST]
+    msgs_as_jsonable = [m["JSONable"] for m in REQUEST_OUTPUTS_MODEL_TEST]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in INVALID_REQUEST_OUTPUTS]
 
 
 FitParametersInput = compute_fit_parameters_input_model(
@@ -82,11 +78,9 @@ class TestFitParametersInput(GenericMessageSerializationTest):
     """
 
     ModelClass = FitParametersInput
-    msgs_as_python = [m["Python"] for m in FIT_PARAMETERS_INPUT_SAMPLES]
-    msgs_as_jsonable = [m["JSONable"] for m in FIT_PARAMETERS_INPUT_SAMPLES]
-    invalid_msgs_as_jsonable = [
-        m["JSONable"] for m in INVALID_FIT_PARAMETERS_INPUT_SAMPLES
-    ]
+    msgs_as_python = [m["Python"] for m in FIT_PARAM_INPUTS_MODEL_TEST]
+    msgs_as_jsonable = [m["JSONable"] for m in FIT_PARAM_INPUTS_MODEL_TEST]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in INVALID_FIT_PARAM_INPUTS]
 
 
 class TestFitParametersOutput(GenericMessageSerializationTest):
@@ -95,8 +89,8 @@ class TestFitParametersOutput(GenericMessageSerializationTest):
     """
 
     ModelClass = FittedParameters
-    msgs_as_python = [m["Python"] for m in FIT_PARAMETERS_OUTPUT_SAMPLES]
-    msgs_as_jsonable = [m["JSONable"] for m in FIT_PARAMETERS_OUTPUT_SAMPLES]
+    msgs_as_python = [m["Python"] for m in FIT_PARAM_OUTPUTS_MODEL_TEST]
+    msgs_as_jsonable = [m["JSONable"] for m in FIT_PARAM_OUTPUTS_MODEL_TEST]
     invalid_msgs_as_jsonable = [
-        m["JSONable"] for m in INVALID_FIT_PARAMETERS_OUTPUT_SAMPLES
+        m["JSONable"] for m in INVALID_FIT_PARAM_OUTPUTS
     ]

@@ -22,21 +22,19 @@ SPDX-License-Identifier: Apache-2.0
 from esg.test.generic_tests import GenericWorkerTaskTest
 
 from worker import fit_parameters_task, request_task
-from .data import REQUEST_INPUT_SAMPLES
-from .data import REQUEST_OUTPUT_SAMPLES
-from .data import FIT_PARAMETERS_INPUT_SAMPLES
-from .data import FIT_PARAMETERS_OUTPUT_SAMPLES
+from .data import REQUEST_INPUTS_FOOC_TEST
+from .data import REQUEST_OUTPUTS_FOOC_TEST
+from .data import FIT_PARAM_INPUTS_FOOC_TEST
+from .data import FIT_PARAM_OUTPUTS_FOOC_TEST
 
 
 class TestRequestTask(GenericWorkerTaskTest):
     task_to_test = request_task
-    input_data_jsonable = [m["JSONable"] for m in REQUEST_INPUT_SAMPLES]
-    output_data_jsonable = [m["JSONable"] for m in REQUEST_OUTPUT_SAMPLES]
+    input_data_jsonable = [m["JSONable"] for m in REQUEST_INPUTS_FOOC_TEST]
+    output_data_jsonable = [m["JSONable"] for m in REQUEST_OUTPUTS_FOOC_TEST]
 
 
 class TestFitParametersTask(GenericWorkerTaskTest):
     task_to_test = fit_parameters_task
-    input_data_jsonable = [m["JSONable"] for m in FIT_PARAMETERS_INPUT_SAMPLES]
-    output_data_jsonable = [
-        m["JSONable"] for m in FIT_PARAMETERS_OUTPUT_SAMPLES
-    ]
+    input_data_jsonable = [m["JSONable"] for m in FIT_PARAM_INPUTS_FOOC_TEST]
+    output_data_jsonable = [m["JSONable"] for m in FIT_PARAM_OUTPUTS_FOOC_TEST]
