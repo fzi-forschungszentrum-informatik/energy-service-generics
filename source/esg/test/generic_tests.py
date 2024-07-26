@@ -314,7 +314,7 @@ class GenericFOOCTest:
             input_data = self.InputDataModel.model_validate(input_jsonable)
             output_data = payload_function(input_data)
             actual_output = self.OutputDataModel.model_validate(output_data)
-            actual_output_jsonable = actual_output.model_dump()
+            actual_output_jsonable = json.loads(actual_output.model_dump_json())
 
             assert actual_output_jsonable == expected_output_jsonable
 
