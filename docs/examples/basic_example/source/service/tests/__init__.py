@@ -16,3 +16,9 @@ limitations under the License.
 SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
+
+import sys
+from pathlib import Path
+
+parent_dir = str(Path(__file__).parent.parent.absolute())
+sys.path.insert(0, parent_dir)
