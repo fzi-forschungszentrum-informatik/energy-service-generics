@@ -21,6 +21,8 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import asyncio
+from multiprocessing import Process
+from time import sleep
 
 import pytest
 
@@ -47,3 +49,44 @@ class TestClassWithFixtures:
         names = self.fixture_names
         for name in names:
             setattr(self, name, request.getfixturevalue(name))
+
+
+class APIInProcess:
+    """
+    A helper that executes the API class in a parallel process to
+    make testing easier.
+    """
+
+    def __init__(self, api):
+        """
+        Put the `API` instance in a dedicated process.
+
+        Arguments:
+        ----------
+        api : Initialized API class.
+        """
+        self.api = api
+
+        def _run_API(api):
+            api.run()
+
+        self.process = Process(
+            target=_run_API,
+            kwargs={"api": self.api},
+            daemon=True,
+        )
+
+    def __enter__(self):
+        self.process.start()
+        # Give uvicorn some time to start up.
+        sleep(0.2)
+        # Compute the root path of the API.
+        root_path = self.api.fastapi_app.root_path
+        base_url_root = f"http://localhost:8800{root_path}"
+        return base_url_root
+
+    def __exit__(self, *_):
+        self.process.terminate()
+        # XXX: This is super important, as the next test will else
+        #      not be able to spin up the server again.
+        self.process.join()

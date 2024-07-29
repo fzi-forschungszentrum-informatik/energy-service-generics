@@ -24,6 +24,9 @@ import json
 from pydantic import ValidationError
 import pytest
 
+from esg.clients.service import GenericServiceClient
+from esg.test.tools import APIInProcess
+
 
 class GenericMessageSerializationTest:
     """
@@ -319,6 +322,129 @@ class GenericFOOCTest:
             assert actual_output_jsonable == expected_output_jsonable
 
 
+class GenericAPITest:
+    """
+    Generic Tests for API Instances.
+
+    This basically just verifies that the models are wired up correctly as
+    validating the tasks too would require a full integration with the worker.
+
+
+    Attributes:
+    -----------
+    tested_api : API instance
+        This is the initialized API class that should be tested.
+    celery_app : Celery app
+        The app that is used by `request_task` and  `fit_parameters_task`
+        of the API.
+    endpoint : str
+        Either `request` or `fit_parameters`.
+    InputDataModel : Pydantic model
+        The data model used to parse Python data from `input_data_json`.
+    OutputDataModel : Pydantic model
+        The data model used to serialize whatever is returned by
+        `payload_function`.
+    input_data_jsonable : list of anything.
+        The JSONable representation of the input data that should be
+        used for testing.
+    output_data_jsonable : list of anything.
+        Similar to `input_data_jsonable` but now to expected output
+        for each item in the input.
+    """
+
+    tested_api = None
+    celery_app = None
+    endpoint = None
+    InputDataModel = None
+    OutputDataModel = None
+    input_data_jsonable = None
+    output_data_jsonable = None
+
+    def setup_method(self):
+        """
+        Just to make sure typos in endpoint definition are brought to the
+        attention of the dev.
+        """
+        if self.endpoint not in ["request", "fit-parameters"]:
+            raise RuntimeError("Invalid endpoint.")
+
+    def test_input_models_correct(self):
+        """
+        Verify that the configured input data model is able to process
+        the input test data.
+        """
+        with APIInProcess(self.tested_api) as base_url_root:
+            client = GenericServiceClient(
+                base_url=f"{base_url_root}/",
+                endpoint=self.endpoint,
+                InputModel=self.InputDataModel,
+            )
+
+            # Raises if test API is not accessible.
+            client.check_connection()
+
+            # Check no other IDs are stored as this might make the test
+            # below pass although it should fail.
+            assert len(client.task_ids) == 0
+
+            for i, input_data_jsonable_i in enumerate(self.input_data_jsonable):
+                # This will fail (i.e. return a non 200 status code which
+                # makes the client raise an exception) if the input model is
+                # not set up correctly.
+                client.post_jsonable(input_data_jsonable_i)
+
+                # Check that the API returned an ID for the task, which means
+                # that processing the data and setting up the task has worked.
+                assert len(client.task_ids) == i + 1
+
+    def test_output_models_correct(self):
+        """
+        Verify that the configured output data model is able to process
+        the output test data.
+
+        NOTE: If the output data model is indeed not correctly wired up you will
+              likely see this test fail with a HTTP 500 error and this log line:
+              "Task computed data not matching the `RequestOutput` model."
+        """
+        with APIInProcess(self.tested_api) as base_url_root:
+            client = GenericServiceClient(
+                base_url=f"{base_url_root}/",
+                endpoint=self.endpoint,
+                InputModel=self.InputDataModel,
+            )
+
+            # Raises if test API is not accessible.
+            client.check_connection()
+
+            # Prevents possibly wired errors in tests by making sure no other
+            # tasks ids are known to the client.
+            client.task_ids = []
+
+            in_out_data_jsonable = zip(
+                self.input_data_jsonable, self.output_data_jsonable
+            )
+
+            task = getattr(
+                # The `replace` makes the "fit-parameters" into fit_parameters
+                # as this matches the name of the corresponding task in the API.
+                self.tested_api,
+                f"{self.endpoint}_task".replace("-", "_"),
+            )
+            for in_data_jsonable, out_data_jsonable in in_out_data_jsonable:
+
+                task_instance = task.delay(
+                    input_data_json=json.dumps(in_data_jsonable)
+                )
+
+                self.celery_app.backend.mark_as_done(
+                    task_instance.id, json.dumps(out_data_jsonable)
+                )
+                client.task_ids.append(task_instance.id)
+
+            actual_output_data = client.get_results_jsonable()
+            assert actual_output_data == self.output_data_jsonable
+
+
 class GenericEndToEndServiceTests:
     """
     Checks that the service can be used end to end.
@@ -328,22 +454,18 @@ class GenericEndToEndServiceTests:
     those functions that affect the usage of the service.
 
     TODO: Refactor this!
-            * This should either get an instance of the API or as alternative
-              a URL if the service is online already.
-            * If the API instance is set, it must wrap the API into a process
-              similar to the approach in the api tests.
-            * You need to handle authentication
-            * Add handling of fit parameters.
-            * If fitting is tested you likely need to allow some overloading
-              of the way how it is tested that the values are as expected.
-              I.e. we might only want to check that the output obeys a certain
-              format. You could add two options, one just verifies that the
-              output format is correct, another one checks for specific values.
-            * You might want to add tests that validate that invalid inputs
-              are detected.
-            * This should likely extend some other tests that implement the
-              functionality above, especially regarding IO checking and
-              testing wether the expected results are computed.
+            * This should get a URL of the service which must be online already.
+            * You need to handle authentication.
+            * Add handling of fit parameters by defining which endpoint is used.
+            * The main idea is that this tests checks weather the service
+              works. It should issue a valid request, check the status (we
+              might introduce a time limit here), and finally fetches the
+              result. If everything can be done without errors the service is
+              fine.
+            * It's not the job of this test to validate that FOOC is implemented
+              correctly, this is done by the dedicated FOOC tests.
+              Reason: Mocking live service to use certain input data is likely
+              not possible with reasonable effort.
 
 
     Attributes:

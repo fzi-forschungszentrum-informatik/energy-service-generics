@@ -7,10 +7,11 @@ This is the fundamental example that demonstrates how to build a service from ex
 In order to run the service simply use [docker compose](https://docs.docker.com/compose/gettingstarted/). As preliminary build the Energy Service Generics Docker images if not done already by executing. Assuming, that you are currently in the [folder of the basic example](https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/tree/main/docs/examples/basic_example/), build the images with:
 
 ```bash
-bash ../../../build-docker-images.sh
+cd ../../../
+bash build-docker-images.sh
 ```
 
-Then run
+Then return in this directory and execute:
 
 ```bash
 docker compose up

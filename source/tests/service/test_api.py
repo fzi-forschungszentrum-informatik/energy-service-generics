@@ -24,7 +24,6 @@ from datetime import datetime, timedelta, timezone
 from functools import reduce
 import json
 import logging
-from multiprocessing import Process
 from unittest.mock import patch, MagicMock
 from uuid import UUID
 from time import sleep
@@ -39,6 +38,7 @@ import requests
 from esg.test.jwt_utils import RSA256_KEY
 from esg.test.jwt_utils import RSA256_PRIVATE_KEY
 from esg.test.jwt_utils import INVALID_RSA_PRIVATE_KEY
+from esg.test.tools import APIInProcess
 
 # To prevent tests from failing if only parts of the package are used.
 try:
@@ -573,43 +573,6 @@ class TestApiInit:
             assert component_entry is not None
 
 
-class APIInProcess:
-    """
-    A helper that executes the API class in a parallel process to
-    make testing easier.
-    """
-
-    def __init__(self, api_kwargs):
-        """
-        Init and run `API` in a dedicated process.
-        """
-        self.api = API(**api_kwargs)
-
-        def _run_API(api):
-            api.run()
-
-        self.process = Process(
-            target=_run_API,
-            kwargs={"api": self.api},
-            daemon=True,
-        )
-
-    def __enter__(self):
-        self.process.start()
-        # Give uvicorn some time to start up.
-        sleep(0.2)
-        # Compute the root path of the API.
-        root_path = self.api.fastapi_app.root_path
-        base_url_root = f"http://localhost:8800{root_path}"
-        return base_url_root
-
-    def __exit__(self, *_):
-        self.process.terminate()
-        # XXX: This is super important, as the next test will else
-        #      not be able to spin up the server again.
-        self.process.join()
-
-
 @pytest.mark.skipif(
     service_extra_not_installed,
     reason="requires installation with `service` extra.",
@@ -695,7 +658,8 @@ class TestApiValidateJwt:
         }
 
         with patch.dict(os.environ, envs):
-            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+            test_api = API(**API_DEFAULT_KWARGS)
+            with APIInProcess(test_api) as base_url_root:
                 self.call_and_check_status_code(
                     base_url_root, expected_status_code=401
                 )
@@ -720,7 +684,8 @@ class TestApiValidateJwt:
         )
 
         with patch.dict(os.environ, envs):
-            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+            test_api = API(**API_DEFAULT_KWARGS)
+            with APIInProcess(test_api) as base_url_root:
                 self.call_and_check_status_code(
                     base_url_root, expected_status_code=422, token=token
                 )
@@ -765,7 +730,8 @@ class TestApiValidateJwt:
         }
 
         with patch.dict(os.environ, envs):
-            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+            test_api = API(**API_DEFAULT_KWARGS)
+            with APIInProcess(test_api) as base_url_root:
                 for reason_to_fail, invalid_token in invalid_tokens.items():
                     print(f"Checking token with: {reason_to_fail}")
                     self.call_and_check_status_code(
@@ -807,7 +773,8 @@ class TestApiValidateJwt:
         )
 
         with patch.dict(os.environ, envs):
-            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+            test_api = API(**API_DEFAULT_KWARGS)
+            with APIInProcess(test_api) as base_url_root:
                 self.call_and_check_status_code(
                     base_url_root, expected_status_code=422, token=token
                 )
@@ -912,7 +879,8 @@ class TestApiValidateJwt:
         }
 
         with patch.dict(os.environ, envs):
-            with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+            test_api = API(**API_DEFAULT_KWARGS)
+            with APIInProcess(test_api) as base_url_root:
                 for reason_to_fail, invalid_token in invalid_tokens.items():
                     print(f"Checking token with: {reason_to_fail}")
                     self.call_and_check_status_code(
@@ -949,7 +917,8 @@ class TestRun:
         """
         The root page should serve the SwaggerUI page.
         """
-        with APIInProcess(API_DEFAULT_KWARGS) as base_url_root:
+        test_api = API(**API_DEFAULT_KWARGS)
+        with APIInProcess(test_api) as base_url_root:
             response = requests.get(f"{base_url_root}/")
 
         assert response.status_code == 200
@@ -1002,7 +971,8 @@ class PostEndpointTests:
             )
         else:
             raise RuntimeError("Invalid endpoint.")
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             client = GenericServiceClient(
                 base_url=f"{base_url_root}/",
                 endpoint=self.endpoint,
@@ -1043,7 +1013,8 @@ class PostEndpointTests:
             )
         else:
             raise RuntimeError("Invalid endpoint.")
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             print(
                 "Test sets up Client with InputModel: "
                 f"{InputModel.model_json_schema()}"
@@ -1082,7 +1053,8 @@ class PostEndpointTests:
         """
         api_kwargs = API_DEFAULT_KWARGS | dummy_tasks
 
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             response = requests.post(
                 f"{base_url_root}/{self.endpoint}/",
                 json=self.invalid_input_data_jsonable,
@@ -1249,7 +1221,8 @@ class StatusEndpointTests:
         ]
 
         api_kwargs = API_DEFAULT_KWARGS
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             for celery_state, expected_task_status_text in status_map:
                 print(f"Checking celery state: {celery_state}")
                 task = execute_task_with_state.delay(celery_state)
@@ -1270,7 +1243,8 @@ class StatusEndpointTests:
         should raise a 404.
         """
         api_kwargs = API_DEFAULT_KWARGS
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             random_task_id = "12345678-1234-5678-1234-567812345678"
 
             response = requests.get(
@@ -1291,7 +1265,8 @@ class StatusEndpointTests:
             "RequestInducedException",
         ]
         api_kwargs = API_DEFAULT_KWARGS
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             for test_exception in test_exceptions:
                 print(f"Checking for exception: {test_exception}")
                 task = execute_task_that_raises.delay(test_exception)
@@ -1370,7 +1345,8 @@ class ResultEndpointTests:
         ]
 
         api_kwargs = API_DEFAULT_KWARGS
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             for celery_state, expected_status_code in status_map:
                 print(f"Checking celery state: {celery_state}")
                 task = execute_task_with_state.delay(celery_state)
@@ -1393,7 +1369,8 @@ class ResultEndpointTests:
         else:
             raise ValueError(f"Encountered unknown endpoint: {self.endpoint}")
         api_kwargs = API_DEFAULT_KWARGS
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             client = GenericServiceClient(
                 base_url=f"{base_url_root}/",
                 endpoint=self.endpoint,
@@ -1432,7 +1409,8 @@ class ResultEndpointTests:
             "FittedParameters": self.InvalidOutputModel,
         }
 
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             # Start the task.
             task = dummy_task.delay(self.valid_input_data_json)
             sleep(0.05)  # Give the task a little time to start
@@ -1448,7 +1426,8 @@ class ResultEndpointTests:
         Check that a task that raises an exception is returned as 500.
         """
         api_kwargs = API_DEFAULT_KWARGS
-        with APIInProcess(api_kwargs) as base_url_root:
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
             # Start the task.
             task = execute_task_that_raises.delay("ValueError")
             sleep(0.05)  # Give the task a little time to start
