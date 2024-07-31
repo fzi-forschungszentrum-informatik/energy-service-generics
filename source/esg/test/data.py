@@ -46,6 +46,8 @@ SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timezone, timedelta
 
+from esg.test.tools import copy_test_data
+
 """
 Templates for copy paste:
 
@@ -1059,31 +1061,15 @@ invalid_put_summaries = [
 #
 ###############################################################################
 geographic_positions = [
-    # fmt: off
-    # Position with height not specified.
+    # Position with all positive values.
     {
         "Python": {
             "latitude": 49.01365,
             "longitude": 8.40444,
-            "height": None,
         },
         "JSONable": {
             "latitude": 49.01365,
             "longitude": 8.40444,
-            "height": None,
-        },
-    },
-    # Position with height specified.
-    {
-        "Python": {
-            "latitude": 52.52094,
-            "longitude": 13.40949,
-            "height": 368.03,
-        },
-        "JSONable": {
-            "latitude": 52.52094,
-            "longitude": 13.40949,
-            "height": 368.03,
         },
     },
     # Position with negative values for both lat and lon.
@@ -1091,159 +1077,131 @@ geographic_positions = [
         "Python": {
             "latitude": -22.95158,
             "longitude": -43.21074,
-            "height": 30.0,
         },
         "JSONable": {
             "latitude": -22.95158,
             "longitude": -43.21074,
-            "height": 30.0,
         },
     },
-    # fmt: on
 ]
 
 invalid_geographic_positions = [
-    # fmt: off
     # Position must have latitude
     {
-        "Python": {
-            "longitude": -43.21074,
-            "height": 30.0,
-        },
         "JSONable": {
             "longitude": -43.21074,
-            "height": 30.0,
         },
     },
     # Position must have longitude
     {
-        "Python": {
-            "latitude": -22.95158,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": -22.95158,
-            "height": 30.0,
         },
     },
     # Longitude cannot be larger 180°
     {
-        "Python": {
-            "latitude": -22.95158,
-            "longitude": 181.1,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": -22.95158,
             "longitude": 181.1,
-            "height": 30.0,
         },
     },
     # Longitude cannot be smaller -180°
     {
-        "Python": {
-            "latitude": -22.95158,
-            "longitude": -180.1,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": -22.95158,
             "longitude": -180.1,
-            "height": 30.0,
         },
     },
     # Longitude cannot be None
     {
-        "Python": {
-            "latitude": -22.95158,
-            "longitude": None,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": -22.95158,
             "longitude": None,
-            "height": 30.0,
         },
     },
     # Longitude must not be string.
     {
-        "Python": {
-            "latitude": -22.95158,
-            "longitude": "Not a float!",
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": -22.95158,
             "longitude": "Not a float!",
-            "height": 30.0,
         },
     },
     # Latitude cannot be larger 90°
     {
-        "Python": {
-            "latitude": 90.1,
-            "longitude": -22.95158,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": 90.1,
             "longitude": -22.95158,
-            "height": 30.0,
         },
     },
     # Latitude cannot be smaller -90°
     {
-        "Python": {
-            "latitude": -90.1,
-            "longitude": -22.95158,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": -90.1,
             "longitude": -22.95158,
-            "height": 30.0,
         },
     },
     # Latitude cannot be None
     {
-        "Python": {
-            "latitude": None,
-            "longitude": -22.95158,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": None,
             "longitude": -22.95158,
-            "height": 30.0,
         },
     },
     # Latitude must not be string.
     {
-        "Python": {
-            "latitude": "Not a float!",
-            "longitude": -22.95158,
-            "height": 30.0,
-        },
         "JSONable": {
             "latitude": "Not a float!",
             "longitude": -22.95158,
-            "height": 30.0,
         },
     },
+]
+
+# Every valid geographic position object must be valid here too once we add
+# a valid height value.
+geographic_positions_with_height = copy_test_data(
+    geographic_positions,
+    add_to_python={"height": 368.03},
+    add_to_jsonable={"height": 368.03},
+)
+
+# Every invalid geographic position must be invalid too, even if a VALID
+# height is added. Furthermore add valid geographic positions with invalid
+# height values.
+invalid_geographic_positions_with_height = copy_test_data(
+    invalid_geographic_positions,
+    add_to_jsonable={"height": 368.03},
+) + [
     # Height must be float.
     {
-        "Python": {
-            "latitude": -22.95158,
-            "longitude": -43.21074,
-            "height": "Not a float!",
-        },
         "JSONable": {
             "latitude": -22.95158,
             "longitude": -43.21074,
             "height": "Not a float!",
         },
     },
-    # fmt: on
+    # Cannot be negative.
+    {
+        "JSONable": {
+            "latitude": -22.95158,
+            "longitude": -43.21074,
+            "height": -100,
+        },
+    },
+    # Cannot be missing.
+    {
+        "JSONable": {
+            "latitude": -22.95158,
+            "longitude": -43.21074,
+        },
+    },
+    # Cannot be `None`.
+    {
+        "JSONable": {
+            "latitude": -22.95158,
+            "longitude": -43.21074,
+            "height": None,
+        },
+    },
 ]
 
 pv_systems = [
@@ -1253,13 +1211,11 @@ pv_systems = [
             "azimuth_angle": 0,
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # pv_system with floats
@@ -1268,13 +1224,11 @@ pv_systems = [
             "azimuth_angle": 5.4,
             "inclination_angle": 25.62,
             "nominal_power": 15.4,
-            "power_datapoint_id": 2,
         },
         "JSONable": {
             "azimuth_angle": 5.4,
             "inclination_angle": 25.62,
             "nominal_power": 15.4,
-            "power_datapoint_id": 2,
         },
     },
     # pv_system with 0 values
@@ -1283,13 +1237,11 @@ pv_systems = [
             "azimuth_angle": 0,
             "inclination_angle": 0,
             "nominal_power": 0,
-            "power_datapoint_id": 3,
         },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 0,
             "nominal_power": 0,
-            "power_datapoint_id": 3,
         },
     },
     # pv_system with negative azimuth angle
@@ -1298,13 +1250,11 @@ pv_systems = [
             "azimuth_angle": -35,
             "inclination_angle": 90,
             "nominal_power": 15,
-            "power_datapoint_id": 4,
         },
         "JSONable": {
             "azimuth_angle": -35,
             "inclination_angle": 90,
             "nominal_power": 15,
-            "power_datapoint_id": 4,
         },
     },
 ]
@@ -1312,132 +1262,68 @@ pv_systems = [
 invalid_pv_systems = [
     # pv_system must have azimuth angle
     {
-        # fmt: off
-        "Python": {
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
-        # fmt: on
     },
     # azimuth angle cannot be larger 90°
     {
-        "Python": {
-            "azimuth_angle": 180,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 180,
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # azimuth angle cannot be smaller -90°
     {
-        "Python": {
-            "azimuth_angle": -95,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": -95,
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # azimuth angle cannot be None
     {
-        "Python": {
-            "azimuth_angle": None,
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": None,
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # azimuth angle must not be string.
     {
-        "Python": {
-            "azimuth_angle": "This is a string",
-            "inclination_angle": 20,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": "This is a string",
             "inclination_angle": 20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # pv_system must have inclination angle
     {
-        # fmt: off
-        "Python": {
-            "azimuth_angle": 0,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
-        # fmt: on
     },
     # inclination angle cannot be larger 90°
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 95,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 95,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # inclination angle cannot be smaller 0°
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": -20,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": -20,
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # inclination angle cannot be None
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": None,
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": None,
@@ -1446,77 +1332,41 @@ invalid_pv_systems = [
     },
     # inclination angle must not be string.
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": "This is a string",
-            "nominal_power": 15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": "This is a string",
             "nominal_power": 15,
-            "power_datapoint_id": 1,
         },
     },
     # pv_system must have nominal power
     {
-        # fmt: off
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 20,
-            "power_datapoint_id": 1,
         },
-        # fmt: on
     },
     # nominal power cannot be smaller 0pkW
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": -15,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 20,
             "nominal_power": -15,
-            "power_datapoint_id": 1,
         },
     },
     # nominal power cannot be None
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": None,
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 20,
             "nominal_power": None,
-            "power_datapoint_id": 1,
         },
     },
     # nominal power must not be string.
     {
-        "Python": {
-            "azimuth_angle": 0,
-            "inclination_angle": 20,
-            "nominal_power": "This is a string",
-            "power_datapoint_id": 1,
-        },
         "JSONable": {
             "azimuth_angle": 0,
             "inclination_angle": 20,
             "nominal_power": "This is a string",
-            "power_datapoint_id": 1,
         },
     },
 ]

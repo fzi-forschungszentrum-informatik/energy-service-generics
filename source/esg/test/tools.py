@@ -21,6 +21,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import asyncio
+from copy import deepcopy
 from multiprocessing import Process
 from time import sleep
 
@@ -35,6 +36,38 @@ def async_return(return_value=None, loop=None):
     f = asyncio.Future(loop=loop)
     f.set_result(return_value)
     return f
+
+
+def copy_test_data(original_data, add_to_python=None, add_to_jsonable=None):
+    """
+    Makes a deep copy of test data and allows adding fields and values.
+
+    Arguments:
+    ----------
+    original_data : list
+        The original data that should be copied. Expects that the input
+        follows the convention introduced in `esg.test.data`, i.e. is a
+        list containing dicts each containing a "Python" and "JSONable" part.
+    add_to_python : dict
+        Dict of fields and values that should be added under "Python"
+
+    Returns:
+    --------
+    data_copy : list
+        The expected copy of `original_data` appended with the additional data
+        if specified.
+    """
+    data_copy = deepcopy(original_data)
+
+    if add_to_python is not None:
+        for item in data_copy:
+            item["Python"].update(add_to_python)
+
+    if add_to_jsonable is not None:
+        for item in data_copy:
+            item["JSONable"].update(add_to_jsonable)
+
+    return data_copy
 
 
 class TestClassWithFixtures:

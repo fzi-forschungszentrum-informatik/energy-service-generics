@@ -37,7 +37,7 @@ from esg.models.base import _RootModel
 
 class GeographicPosition(_BaseModel):
     """
-    Defines the position of a point somewhere on or above the Earth surface.
+    Defines the position of a point somewhere on Earth's surface.
     """
 
     latitude: float = Field(
@@ -58,43 +58,21 @@ class GeographicPosition(_BaseModel):
             "Longitude angle (West: -, East: +) of the position in degree."
         ),
     )
-    height: Optional[float] = Field(
-        default=None,
+
+
+class GeographicPositionWithHeight(GeographicPosition):
+    """
+    Defines the position of a point somewhere above Earth's surface.
+    """
+
+    height: float = Field(
         examples=[75.3],
         ge=0.0,
         # 1000m Seems a sane limit for know just prevent people from
         # accidentally requesting strange high heights. Beyond it
         # has no critical function and is hence also not tested for.
         le=1000.0,
-        description=(
-            "Height above ground surface. This is optional and `null` "
-            "(i.e. the default) means that the value is not specified."
-        ),
-    )
-
-
-class GeographicPositionList(_RootModel):
-    """
-    Defines a list of positions.
-    """
-
-    root: List[GeographicPosition] = Field(
-        ...,
-        description=("A list of geographic position items."),
-    )
-
-
-class GeographicPositionDict(_RootModel):
-    """
-    Defines a dict of positions, i.e. each position has a name associated to it.
-    """
-
-    root: Dict[str, GeographicPosition] = Field(
-        ...,
-        description=(
-            "A Dict of names (e.g. ids) and the corresponding "
-            "geographic position items."
-        ),
+        description=("Height above ground surface in meters."),
     )
 
 
@@ -132,41 +110,20 @@ class PVSystem(_BaseModel):
             "The unit of the nominal power is kWp."
         ),
     )
-    power_datapoint_id: Optional[int] = Field(
-        None,
-        examples=[1],
-        description=(
-            "The id of the datapoint which is used to store forecasts "
-            "of power production and measurements of the same, at least "
-            "if such measurements exist."
-        ),
-    )
 
 
-class PVSystemList(_RootModel):
-    """
-    Defines a list of pv systems.
-    """
-
-    root: List[PVSystem] = Field(
-        ...,
-        description="A list of pv system items.",
-    )
-
-
-class PVSystemDict(_RootModel):
-    """
-    Defines a dict of pv systems, i.e. each pv system has a name
-    associated to it.
-    """
-
-    root: Dict[str, PVSystem] = Field(
-        ...,
-        description=(
-            "A Dict of names (e.g. ids) and the corresponding "
-            "pv system items."
-        ),
-    )
+# NOTE: In case you need it in future. A PV System with associated power
+#       datapoint could be like this.
+# TODO: Add the tests before using it.
+# class PVSystemWithPowerDatapoint(PVSystem):
+#     power_datapoint_id: int = Field(
+#         examples=[1],
+#         description=(
+#             "The id of the datapoint which is used to store forecasts "
+#             "of power production and measurements of the same, at least "
+#             "if such measurements exist."
+#         ),
+#     )
 
 
 class Plant(_BaseModel):
@@ -209,17 +166,6 @@ class Plant(_BaseModel):
             "Metadata of the photovoltaic plant. Is required for "
             "forecasting the photovoltaic power production of the plant"
         ),
-    )
-
-
-class PlantList(_RootModel):
-    """
-    Defines a list of plant items.
-    """
-
-    root: List[Plant] = Field(
-        ...,
-        description=("A list of plant items."),
     )
 
 
@@ -273,17 +219,6 @@ class Product(_BaseModel):
     )
 
 
-class ProductList(_RootModel):
-    """
-    Defines a list of product items.
-    """
-
-    root: List[Product] = Field(
-        ...,
-        description=("A list of products items."),
-    )
-
-
 class ProductRun(_BaseModel):
     """
     Identifies the computed result of a product service at a certain
@@ -333,15 +268,4 @@ class ProductRun(_BaseModel):
         description=(
             "The covered time span by this product run is less " "this value."
         ),
-    )
-
-
-class ProductRunList(_RootModel):
-    """
-    Defines a list of product run items.
-    """
-
-    root: List[ProductRun] = Field(
-        ...,
-        description=("A list of product run items."),
     )
