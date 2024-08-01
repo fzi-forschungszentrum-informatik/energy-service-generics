@@ -130,6 +130,12 @@ class Plant(_BaseModel):
     """
     Defines the metadata necessary to compute optimized schedules or forecasts
     for a physical entity, e.g. a PV plant or a building.
+
+    This model contains all types of metadata defined above, but all optional.
+    The idea is that this model should be able to store plant data for all
+    types of forecasting or optimization algorithms. On the other hand some
+    metadata will likely be unknown for some plants. Hence we do not force
+    the presence of the metadata groups.
     """
 
     id: Optional[int] = Field(
@@ -146,19 +152,21 @@ class Plant(_BaseModel):
             "Is used in e.g. in plots to analyses the product quality."
         ),
     )
-    product_ids: List[int] = Field(
-        default=list(),
-        examples=[[1]],
-        description=(
-            "A list of product IDs that should be computed for this plant."
-        ),
-    )
     geographic_position: Optional[GeographicPosition] = Field(
         default=None,
         description=(
-            "The position of the plant on earth. Is required for "
+            "The position of the plant on Earth. Is required for "
             " computing weather forecast data etc."
         ),
+    )
+    geographic_position_with_height: Optional[GeographicPositionWithHeight] = (
+        Field(
+            default=None,
+            description=(
+                "The position of the plant above Earth's surface. E.g. for "
+                "wind power plants."
+            ),
+        )
     )
     pv_system: Optional[PVSystem] = Field(
         default=None,
@@ -169,6 +177,7 @@ class Plant(_BaseModel):
     )
 
 
+# TODO: Make this a service. Remove the coverage fields.
 class Product(_BaseModel):
     """
     Defines the metadata for a product.
@@ -219,6 +228,7 @@ class Product(_BaseModel):
     )
 
 
+# TODO: Make this a `RequestTask`. Move the times to dedicated model.
 class ProductRun(_BaseModel):
     """
     Identifies the computed result of a product service at a certain
