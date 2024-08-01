@@ -1372,9 +1372,8 @@ invalid_pv_systems = [
 ]
 
 plants = [
-    # fmt: off
+    # Minimal valid example for plant.
     {
-        # Minimal valid example for plant.
         "Python": {
             "id": None,
             "name": "Name",
@@ -1382,14 +1381,13 @@ plants = [
         "JSONable": {
             "id": None,
             "name": "Name",
-            "product_ids": [],
             "geographic_position": None,
+            "geographic_position_with_height": None,
             "pv_system": None,
         },
     },
-    # fmt: on
+    # Plant with geographic position defined.
     {
-        # Plant with geographic position defined.
         "Python": {
             "id": None,
             "name": "Name",
@@ -1398,14 +1396,32 @@ plants = [
         "JSONable": {
             "id": None,
             "name": "Name",
-            "product_ids": [],
             "geographic_position": geographic_positions[0]["JSONable"],
+            "geographic_position_with_height": None,
             "pv_system": None,
         },
     },
+    # Plant with geographic position with height defined.
     {
-        # Plant with pv system defined.
-        # fmt: off
+        "Python": {
+            "id": None,
+            "name": "Name",
+            "geographic_position_with_height": geographic_positions_with_height[
+                0
+            ]["Python"],
+        },
+        "JSONable": {
+            "id": None,
+            "name": "Name",
+            "geographic_position": None,
+            "geographic_position_with_height": geographic_positions_with_height[
+                0
+            ]["JSONable"],
+            "pv_system": None,
+        },
+    },
+    # Plant with pv system defined.
+    {
         "Python": {
             "id": None,
             "name": "Name",
@@ -1414,45 +1430,32 @@ plants = [
         "JSONable": {
             "id": None,
             "name": "Name",
-            "product_ids": [],
             "geographic_position": None,
+            "geographic_position_with_height": None,
             "pv_system": pv_systems[0]["JSONable"],
         },
-        # fmt: on
     },
     {
-        # Plant with geographic position and pv system defined.
+        # Plant with all metadata fields populated.
         "Python": {
             "id": None,
             "name": "Name",
             "geographic_position": geographic_positions[0]["Python"],
+            "geographic_position_with_height": geographic_positions_with_height[
+                0
+            ]["Python"],
             "pv_system": pv_systems[1]["Python"],
         },
         "JSONable": {
             "id": None,
             "name": "Name",
-            "product_ids": [],
             "geographic_position": geographic_positions[0]["JSONable"],
+            "geographic_position_with_height": geographic_positions_with_height[
+                0
+            ]["JSONable"],
             "pv_system": pv_systems[1]["JSONable"],
         },
     },
-    {
-        # Plant with product defined.
-        "Python": {
-            "id": None,
-            "name": "Name",
-            "product_ids": [1, 2],
-            "geographic_position": geographic_positions[0]["Python"],
-        },
-        "JSONable": {
-            "id": None,
-            "name": "Name",
-            "product_ids": [1, 2],
-            "geographic_position": geographic_positions[0]["JSONable"],
-            "pv_system": None,
-        },
-    },
-    # fmt: off
     {
         # Plant with ID.
         "Python": {
@@ -1462,38 +1465,26 @@ plants = [
         "JSONable": {
             "id": 42,
             "name": "Name",
-            "product_ids": [],
             "geographic_position": None,
+            "geographic_position_with_height": None,
             "pv_system": None,
         },
     },
-    # fmt: on
-    # GOTCHA: If you define additional examples below, you have to set ID
-    # as else the tests in django_models/test_django_metadata.py::TestPlant
-    # will fail
 ]
 
 invalid_plants = [
-    # fmt: off
+    # Empty name is not allowed, b/c not expressive.
     {
-        # Empty name is not allowed, b/c not expressive.
-        "Python": {
-            "name": "",
-        },
         "JSONable": {
             "name": "",
         },
     },
+    # Name field must always be provided.
     {
-        # Name field must always be provided.
-        "Python": {
-            "geographic_position": None,
-        },
         "JSONable": {
             "geographic_position": None,
         },
     },
-    # fmt: on
 ]
 
 products = [
