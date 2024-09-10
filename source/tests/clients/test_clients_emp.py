@@ -25,15 +25,15 @@ from datetime import timedelta
 import pytest
 
 from esg.clients.emp import EmpClient
+from esg.clients.emp import ServiceList
+from esg.clients.emp import RequestTaskList
+from esg.clients.emp import PlantList
 from esg.models.datapoint import DatapointList
 from esg.models.datapoint import PutSummary
 from esg.models.datapoint import ValueDataFrame
 from esg.models.datapoint import ValueMessageByDatapointId
 from esg.models.datapoint import ValueMessageListByDatapointId
-from esg.models.metadata import Product
-from esg.models.metadata import ProductList
-from esg.models.metadata import ProductRunList
-from esg.models.metadata import PlantList
+from esg.models.metadata import Service
 from esg.test import data as td
 from generic import GenericCheckConnectionTests
 from generic import GenericGetTests
@@ -199,55 +199,55 @@ class TestEmpClientGetDatapointValueHistoryAtInterval(GenericGetTests):
     ]
 
 
-class TestEmpClientGetProductLatest(GenericGetTests):
+class TestEmpClientGetServiceLatest(GenericGetTests):
     """
-    Tests for `EmpClient.get_product_latest`
+    Tests for `EmpClient.get_service_latest`
     """
 
     client_class = EmpClient
     base_path = "/emp/api/"
-    endpoint_path = "/emp/api/product/latest/"
-    tested_client_method = "get_product_latest"
-    get_data_jsonable = [p["JSONable"] for p in td.products]
-    get_data_pydantic = ProductList([p["Python"] for p in td.products])
+    endpoint_path = "/emp/api/service/latest/"
+    tested_client_method = "get_service_latest"
+    get_data_jsonable = [p["JSONable"] for p in td.services]
+    get_data_pydantic = ServiceList([p["Python"] for p in td.services])
     all_test_kwargs = [{"query_params": {"test123": "456"}}]
     all_expected_query_params = [{"test123": "456"}]
 
 
-class TestGetProductByName:
+class TestGetServiceByName:
     """
-    Tests for `EmpClient.get_product_by_name`
+    Tests for `EmpClient.get_service_by_name`
     """
 
-    def test_single_product_returned(self, httpserver):
+    def test_single_service_returned(self, httpserver):
         """
         Check that the regex query string is forwarded and that a response
-        containing a single product is returned.
+        containing a single service is returned.
         """
         expected_request = httpserver.expect_oneshot_request(
-            "/emp/api/product/latest/",
+            "/emp/api/service/latest/",
             query_string={"name__regex": "^test124$"},
         )
-        expected_request.respond_with_json([td.products[0]["JSONable"]])
+        expected_request.respond_with_json([td.services[0]["JSONable"]])
 
         client = EmpClient(
             base_url=httpserver.url_for("/emp/api/"),
             check_on_init=False,
         )
-        actual_return = client.get_product_by_name(name="test124")
+        actual_return = client.get_service_by_name(name="test124")
 
-        expected_return = Product(**td.products[0]["Python"])
+        expected_return = Service(**td.services[0]["Python"])
 
         assert actual_return == expected_return
         httpserver.check_assertions()
 
     def test_empty_response_raises(self, httpserver):
         """
-        The method is expected to raise a `ValueError` if no product
+        The method is expected to raise a `ValueError` if no service
         is matched.
         """
         expected_request = httpserver.expect_oneshot_request(
-            "/emp/api/product/latest/",
+            "/emp/api/service/latest/",
             query_string={"name__regex": "^test124$"},
         )
         expected_request.respond_with_json([])
@@ -258,53 +258,53 @@ class TestGetProductByName:
         )
 
         with pytest.raises(ValueError):
-            _ = client.get_product_by_name(name="test124")
+            _ = client.get_service_by_name(name="test124")
 
 
-class TestEmpClientPutProductLatest(GenericPutTests):
+class TestEmpClientPutServiceLatest(GenericPutTests):
     """
-    Tests for `EmpClient.put_product_latest`
-    """
-
-    client_class = EmpClient
-    base_path = "/emp/api/"
-    endpoint_path = "/emp/api/product/latest/"
-    tested_client_method = "put_product_latest"
-    put_data_pydantic = ProductList([p["Python"] for p in td.products])
-    put_data_jsonable = [p["JSONable"] for p in td.products]
-    response_data_jsonable = [p["JSONable"] for p in td.products]
-    response_data_pydantic = ProductList([p["Python"] for p in td.products])
-
-
-class TestEmpClientGetProductRunLatest(GenericGetTests):
-    """
-    Tests for `EmpClient.get_product_run_latest`
+    Tests for `EmpClient.put_service_latest`
     """
 
     client_class = EmpClient
     base_path = "/emp/api/"
-    endpoint_path = "/emp/api/product_run/latest/"
-    tested_client_method = "get_product_run_latest"
-    get_data_jsonable = [p["JSONable"] for p in td.product_runs]
-    get_data_pydantic = ProductRunList([p["Python"] for p in td.product_runs])
+    endpoint_path = "/emp/api/service/latest/"
+    tested_client_method = "put_service_latest"
+    put_data_pydantic = ServiceList([p["Python"] for p in td.services])
+    put_data_jsonable = [p["JSONable"] for p in td.services]
+    response_data_jsonable = [p["JSONable"] for p in td.services]
+    response_data_pydantic = ServiceList([p["Python"] for p in td.services])
+
+
+class TestEmpClientGetRequestTaskLatest(GenericGetTests):
+    """
+    Tests for `EmpClient.get_request_task_latest`
+    """
+
+    client_class = EmpClient
+    base_path = "/emp/api/"
+    endpoint_path = "/emp/api/request_task/latest/"
+    tested_client_method = "get_request_task_latest"
+    get_data_jsonable = [p["JSONable"] for p in td.request_tasks]
+    get_data_pydantic = RequestTaskList([p["Python"] for p in td.request_tasks])
     all_test_kwargs = [{"query_params": {"test123": "456"}}]
     all_expected_query_params = [{"test123": "456"}]
 
 
-class TestEmpClientPutProductRunLatest(GenericPutTests):
+class TestEmpClientPutRequestTaskLatest(GenericPutTests):
     """
-    Tests for `EmpClient.put_product_run_latest`
+    Tests for `EmpClient.put_request_task_latest`
     """
 
     client_class = EmpClient
     base_path = "/emp/api/"
-    endpoint_path = "/emp/api/product_run/latest/"
-    tested_client_method = "put_product_run_latest"
-    put_data_pydantic = ProductRunList([p["Python"] for p in td.product_runs])
-    put_data_jsonable = [p["JSONable"] for p in td.product_runs]
-    response_data_jsonable = [p["JSONable"] for p in td.product_runs]
-    response_data_pydantic = ProductRunList(
-        [p["Python"] for p in td.product_runs]
+    endpoint_path = "/emp/api/request_task/latest/"
+    tested_client_method = "put_request_task_latest"
+    put_data_pydantic = RequestTaskList([p["Python"] for p in td.request_tasks])
+    put_data_jsonable = [p["JSONable"] for p in td.request_tasks]
+    response_data_jsonable = [p["JSONable"] for p in td.request_tasks]
+    response_data_pydantic = RequestTaskList(
+        [p["Python"] for p in td.request_tasks]
     )
 
 

@@ -17,19 +17,30 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-from datetime import datetime
-from datetime import timezone
+from typing import List
 
 from esg.clients.base import HttpBaseClient
+from esg.models.base import _RootModel
 from esg.models.datapoint import DatapointList
 from esg.models.datapoint import PutSummary
 from esg.models.datapoint import ValueDataFrame
 from esg.models.datapoint import ValueMessageByDatapointId
 from esg.models.datapoint import ValueMessageListByDatapointId
-from esg.models.metadata import ProductList
-from esg.models.metadata import ProductRun
-from esg.models.metadata import ProductRunList
-from esg.models.metadata import PlantList
+from esg.models.metadata import Service
+from esg.models.metadata import RequestTask
+from esg.models.metadata import Plant
+
+
+class ServiceList(_RootModel):
+    root: List[Service]
+
+
+class RequestTaskList(_RootModel):
+    root: List[RequestTask]
+
+
+class PlantList(_RootModel):
+    root: List[Plant]
 
 
 class EmpClient(HttpBaseClient):
@@ -201,9 +212,9 @@ class EmpClient(HttpBaseClient):
         value_dataframe = ValueDataFrame.model_validate_json(response.content)
         return value_dataframe
 
-    def get_product_latest(self, query_params=None):
+    def get_service_latest(self, query_params=None):
         """
-        Return the latest values for products targeted by the filter.
+        Return the latest values for services targeted by the filter.
 
         Arguments:
         ----------
@@ -212,96 +223,98 @@ class EmpClient(HttpBaseClient):
 
         Returns:
         --------
-        product_list : esg.models.metadata.ProductList
+        service_list : esg.models.metadata.ProductList
             The response content that has read from DB.
         """
-        response = self.get("/product/latest/", params=query_params)
-        product_list = ProductList.model_validate_json(response.content)
-        return product_list
+        response = self.get("/service/latest/", params=query_params)
+        service_list = ServiceList.model_validate_json(response.content)
+        return service_list
 
-    def get_product_by_name(self, name):
+    def get_service_by_name(self, name):
         """
-        Returns a single product item by exact name match.
+        Returns a single service item by exact name match.
 
         This is a shortcut as it is a common pattern.
 
         Arguments:
         ----------
         name : str
-            The value of the name field the target product item.
+            The value of the name field the target service item.
 
         Returns:
         --------
-        product : esg.models.metadata.Product
-            A single product item.
+        service : esg.models.metadata.Product
+            A single service item.
 
         Raises:
         -------
         ValueError:
-            If no product with such name could be found.
+            If no service with such name could be found.
         """
-        all_matched_products = self.get_product_latest(
+        all_matched_services = self.get_service_latest(
             query_params={"name__regex": "^{}$".format(name)}
         )
         # Due to the exact match above, this should be exactly one item in here.
-        if len(all_matched_products.root) == 1:
-            product = all_matched_products.root[0]
-            return product
+        if len(all_matched_services.root) == 1:
+            service = all_matched_services.root[0]
+            return service
         else:
-            raise ValueError("No product with such name: {}".format(name))
+            raise ValueError("No service with such name: {}".format(name))
 
-    def put_product_latest(self, product_list):
+    def put_service_latest(self, service_list):
         """
-        Update or create one or more product entries.
+        Update or create one or more service entries.
 
         Arguments:
         ----------
-        product_list : esg.models.metadata.ProductList
+        service_list : esg.models.metadata.ProductList
             The content as pydantic instance.
 
         Returns:
         --------
-        product_list : esg.models.metadata.ProductList
+        service_list : esg.models.metadata.ProductList
             The response content that has been written to DB,
             as pydantic instance.
         """
         response = self.put(
-            "/product/latest/", json=product_list.model_dump_jsonable()
+            "/service/latest/", json=service_list.model_dump_jsonable()
         )
-        product_list = ProductList.model_validate_json(response.content)
-        return product_list
+        service_list = ServiceList.model_validate_json(response.content)
+        return service_list
 
-    def create_product_run_from_product(self, product, available_at=None):
+    # def create_request_task_from_product(self, product, available_at=None):
+    #     """
+    #     Creates a RequestTask instance from a Product instance.
+
+    #     TODO: This needs some tests.
+    #     TODO: This must be adapted to RequestTemplate and RequestTask models
+    #           and endpoints.
+
+    #     Arguments:
+    #     ----------
+    #     product : esg.models.metadata.Product
+    #         The corresponding product as pydantic instance.
+    #     available_at : datetime
+    #         If specified will use this time as `available_at` field and
+    #         to compute `coverage_from`/`coverage_to`.
+    #     """
+    #     if available_at is None:
+    #         available_at = datetime.now(tz=timezone.utc)
+
+    #     coverage_from = available_at + product.coverage_from
+    #     coverage_to = available_at + product.coverage_to
+
+    #     request_task = RequestTask(
+    #         product_id=product.id,
+    #         available_at=available_at,
+    #         coverage_from=coverage_from,
+    #         coverage_to=coverage_to,
+    #     )
+    #     return request_task
+
+    def get_request_task_latest(self, query_params=None):
         """
-        Creates a ProductRun instance from a Product instance.
-
-        TODO: This needs some tests.
-
-        Arguments:
-        ----------
-        product : esg.models.metadata.Product
-            The corresponding product as pydantic instance.
-        available_at : datetime
-            If specified will use this time as `available_at` field and
-            to compute `coverage_from`/`coverage_to`.
-        """
-        if available_at is None:
-            available_at = datetime.now(tz=timezone.utc)
-
-        coverage_from = available_at + product.coverage_from
-        coverage_to = available_at + product.coverage_to
-
-        product_run = ProductRun(
-            product_id=product.id,
-            available_at=available_at,
-            coverage_from=coverage_from,
-            coverage_to=coverage_to,
-        )
-        return product_run
-
-    def get_product_run_latest(self, query_params=None):
-        """
-        Return the latest values for product runs targeted by the filter.
+        Return the latest values for request tasks targeted by the filter.
 
         Arguments:
         ----------
@@ -310,33 +323,38 @@ class EmpClient(HttpBaseClient):
 
         Returns:
         --------
-        product_run_list : esg.models.metadata.ProductRunList
+        request_task_list : esg.models.metadata.RequestTaskList
             The response content that has read from DB.
         """
-        response = self.get("/product_run/latest/", params=query_params)
-        product_run_list = ProductRunList.model_validate_json(response.content)
-        return product_run_list
+        response = self.get("/request_task/latest/", params=query_params)
+        request_task_list = RequestTaskList.model_validate_json(
+            response.content
+        )
+        return request_task_list
 
-    def put_product_run_latest(self, product_run_list):
+    def put_request_task_latest(self, request_task_list):
         """
         Update or create one or more product entries.
 
         Arguments:
         ----------
-        product_run_list : esg.models.metadata.ProductRunList
+        request_task_list : esg.models.metadata.RequestTaskList
             The content as pydantic instance.
 
         Returns:
         --------
-        product_run_list : esg.models.metadata.ProductRunList
+        request_task_list : esg.models.metadata.RequestTaskList
             The response content that has been written to DB,
             as pydantic instance.
         """
         response = self.put(
-            "/product_run/latest/", json=product_run_list.model_dump_jsonable()
+            "/request_task/latest/",
+            json=request_task_list.model_dump_jsonable(),
         )
-        product_run_list = ProductRunList.model_validate_json(response.content)
-        return product_run_list
+        request_task_list = RequestTaskList.model_validate_json(
+            response.content
+        )
+        return request_task_list
 
     def get_plant_latest(self, query_params=None):
         """

@@ -24,7 +24,6 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 
-from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -32,7 +31,6 @@ from pydantic import Field
 from pydantic import HttpUrl
 
 from esg.models.base import _BaseModel
-from esg.models.base import _RootModel
 
 
 class GeographicPosition(_BaseModel):
