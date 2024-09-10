@@ -92,3 +92,13 @@ class TestRequestTask(GenericMessageSerializationTest):
     msgs_as_python = [m["Python"] for m in td.request_tasks]
     msgs_as_jsonable = [m["JSONable"] for m in td.request_tasks]
     invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_request_tasks]
+
+
+class TestRequestTemplate(GenericMessageSerializationTest):
+
+    ModelClass = metadata.RequestTemplate
+    msgs_as_python = [m["Python"] for m in td.request_templates]
+    msgs_as_jsonable = [m["JSONable"] for m in td.request_templates]
+    invalid_msgs_as_jsonable = [
+        m["JSONable"] for m in td.invalid_request_templates
+    ]

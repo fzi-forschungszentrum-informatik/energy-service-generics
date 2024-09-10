@@ -305,3 +305,43 @@ class RequestTask(_BaseModel):
             "central database."
         ),
     )
+    coverage: Coverage
+
+
+class RequestTemplate(_BaseModel):
+    """
+    Collects the information necessary to generate a `RequestTask`.
+
+    This is particularly useful for those situations where some software
+    might regularly issue requests to services on behalf of one or more
+    final users. This item can then store the metadata with which the software
+    can derive the data necessary for the request, in particular the service
+    URL, the plant metadata and coverage values.
+    """
+
+    id: Optional[int] = Field(
+        default=None,
+        examples=[1],
+        description=(
+            "The ID of request template if stored in a database. "
+            "NOTE: This is NOT the ID of the task used internally by "
+            "the service NOR the ID of the derived `RequestTask`"
+        ),
+    )
+    service_id: int = Field(
+        ...,
+        examples=[1],
+        description=(
+            "The ID of the corresponding service metadata item in the "
+            "central database."
+        ),
+    )
+    plant_ids: List[int] = Field(
+        default=list(),
+        examples=[[1]],
+        description=(
+            "The IDs of the corresponding plant metadata items in the "
+            "central database."
+        ),
+    )
+    coverage_delta: CoverageDelta

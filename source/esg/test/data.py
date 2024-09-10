@@ -1655,14 +1655,16 @@ invalid_coverage_deltas = [
 
 request_tasks = [
     {
-        # Minimal valid example for product run.
+        # Minimal valid example.
         "Python": {
             "service_id": 1,
+            "coverage": coverages[0]["Python"],
         },
         "JSONable": {
             "id": None,
             "service_id": 1,
             "plant_ids": [],
+            "coverage": coverages[0]["JSONable"],
         },
     },
     {
@@ -1670,11 +1672,13 @@ request_tasks = [
         "Python": {
             "id": 2,
             "service_id": 1,
+            "coverage": coverages[0]["Python"],
         },
         "JSONable": {
             "id": 2,
             "service_id": 1,
             "plant_ids": [],
+            "coverage": coverages[0]["JSONable"],
         },
     },
     {
@@ -1682,20 +1686,100 @@ request_tasks = [
         "Python": {
             "service_id": 1,
             "plant_ids": [1, 2, 42],
+            "coverage": coverages[0]["Python"],
         },
         "JSONable": {
             "id": None,
             "service_id": 1,
             "plant_ids": [1, 2, 42],
+            "coverage": coverages[0]["JSONable"],
         },
     },
 ]
 
 invalid_request_tasks = [
-    # Checks that required fields (`service_id`) can't miss.
+    # Checks that required field `service_id` can't miss.
     {
         "JSONable": {
+            "coverage": coverages[0]["JSONable"],
+        },
+    },
+    # Checks that required field `coverage` can't miss.
+    {
+        "JSONable": {
+            "service_id": 2,
+        },
+    },
+    # Check not null constraints.
+    {
+        "JSONable": {
+            "service_id": None,
+            "coverage": coverages[0]["JSONable"],
+        },
+    },
+    {
+        "JSONable": {
+            "service_id": 1,
+            "coverage": None,
+        },
+    },
+]
+
+request_templates = [
+    {
+        # Minimal valid example.
+        "Python": {
+            "service_id": 1,
+            "coverage_delta": coverage_deltas[0]["Python"],
+        },
+        "JSONable": {
+            "id": None,
+            "service_id": 1,
+            "plant_ids": [],
+            "coverage_delta": coverage_deltas[0]["JSONable"],
+        },
+    },
+    {
+        # With ID set.
+        "Python": {
             "id": 2,
+            "service_id": 1,
+            "coverage_delta": coverage_deltas[0]["Python"],
+        },
+        "JSONable": {
+            "id": 2,
+            "service_id": 1,
+            "plant_ids": [],
+            "coverage_delta": coverage_deltas[0]["JSONable"],
+        },
+    },
+    {
+        # With plant ids set..
+        "Python": {
+            "service_id": 1,
+            "plant_ids": [1, 2, 42],
+            "coverage_delta": coverage_deltas[0]["Python"],
+        },
+        "JSONable": {
+            "id": None,
+            "service_id": 1,
+            "plant_ids": [1, 2, 42],
+            "coverage_delta": coverage_deltas[0]["JSONable"],
+        },
+    },
+]
+
+invalid_request_templates = [
+    # Checks that required field `service_id` can't miss.
+    {
+        "JSONable": {
+            "coverage_delta": coverage_deltas[0]["JSONable"],
+        },
+    },
+    # Checks that required field `coverage_delta` can't miss.
+    {
+        "JSONable": {
+            "service_id": 2,
         },
     },
     # Check not null constraints.
@@ -1703,6 +1787,13 @@ invalid_request_tasks = [
         "JSONable": {
             "id": 2,
             "service_id": None,
+            "coverage_delta": coverage_deltas[0]["JSONable"],
+        },
+    },
+    {
+        "JSONable": {
+            "service_id": 1,
+            "coverage_delta": None,
         },
     },
 ]
