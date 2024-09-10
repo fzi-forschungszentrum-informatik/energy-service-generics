@@ -1487,39 +1487,17 @@ invalid_plants = [
     },
 ]
 
-products = [
+services = [
     {
-        # Minimal valid example for plant with a simple 24h coverage.
+        # Minimal valid example.
         "Python": {
             "name": "PVForecast",
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": timedelta(days=0),
-            "coverage_to": timedelta(days=1),
         },
         "JSONable": {
             "id": None,
             "name": "PVForecast",
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": "PT0S",
-            "coverage_to": "P1D",
-        },
-    },
-    {
-        # With more interesting timedelta values.
-        "Python": {
-            "name": "PVForecast2",
-            "service_url": "http://example.com/product_service/v1/",
-            # This is `-P0DT0H15M0S` might be realistic for PVForecast.
-            "coverage_from": timedelta(days=0, seconds=-4500),
-            # This is `P1DT0H59M0S` might be realistic for PVForecast.
-            "coverage_to": timedelta(days=1, seconds=3540),
-        },
-        "JSONable": {
-            "id": None,
-            "name": "PVForecast2",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": "-PT1H15M",
-            "coverage_to": "P1DT59M",
         },
     },
     {
@@ -1528,293 +1506,203 @@ products = [
             "id": 42,
             "name": "PVForecast3",
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": timedelta(days=0),
-            "coverage_to": timedelta(days=1),
         },
         "JSONable": {
             "id": 42,
             "name": "PVForecast3",
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": "PT0S",
-            "coverage_to": "P1D",
         },
     },
 ]
 
-invalid_products = [
+invalid_services = [
     # Checks that all fields are required.
     {
-        "Python": {
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": timedelta(days=0),
-            "coverage_to": timedelta(days=1),
-        },
         "JSONable": {
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": 0.0,
-            "coverage_to": 86400,
         },
     },
     {
-        "Python": {
-            "name": "PVForecast",
-            "coverage_from": timedelta(days=0),
-            "coverage_to": timedelta(days=1),
-        },
         "JSONable": {
             "name": "PVForecast",
-            "coverage_from": 0.0,
-            "coverage_to": 86400,
-        },
-    },
-    {
-        "Python": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_to": timedelta(days=1),
-        },
-        "JSONable": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_to": 86400,
-        },
-    },
-    {
-        "Python": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": timedelta(days=0),
-        },
-        "JSONable": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": 0.0,
         },
     },
     # Checks that fields cannot be None
     {
-        "Python": {
-            "name": None,
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": timedelta(days=0),
-            "coverage_to": timedelta(days=1),
-        },
         "JSONable": {
             "name": None,
             "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": 0.0,
-            "coverage_to": 86400,
         },
     },
     {
-        "Python": {
+        "JSONable": {
             "name": "PVForecast",
             "service_url": None,
-            "coverage_from": timedelta(days=0),
-            "coverage_to": timedelta(days=1),
+        },
+    },
+]
+
+coverages = [
+    {
+        # Minimal valid example of a simple 24h coverage.
+        "Python": {
+            "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
+            "to_time": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
         },
         "JSONable": {
-            "name": "PVForecast",
-            "plant_ids": [],
-            "service_url": None,
-            "coverage_from": 0.0,
-            "coverage_to": 86400,
+            "from_time": "2022-05-01T00:00:00Z",
+            "to_time": "2022-05-02T00:00:00Z",
+            "available_at": None,
         },
     },
     {
+        # With available at set..
         "Python": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": None,
-            "coverage_to": timedelta(days=1),
+            "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
+            "to_time": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
+            "available_at": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
         },
         "JSONable": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": None,
-            "coverage_to": 86400,
+            "from_time": "2022-05-01T00:00:00Z",
+            "to_time": "2022-05-02T00:00:00Z",
+            "available_at": "2022-05-01T00:00:00Z",
+        },
+    },
+]
+
+invalid_coverages = [
+    # Checks that required fields can't miss.
+    {
+        "JSONable": {
+            "coverage_to": "2022-05-02T00:00:00Z",
         },
     },
     {
-        "Python": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": timedelta(days=0),
-            "coverage_to": None,
-        },
         "JSONable": {
-            "name": "PVForecast",
-            "service_url": "http://example.com/product_service/v1/",
-            "coverage_from": 0.0,
+            "coverage_from": "2022-05-01T00:00:00Z",
+        },
+    },
+    # Check not null constraints.
+    {
+        "JSONable": {
+            "coverage_from": None,
+            "coverage_to": "2022-05-02T00:00:00Z",
+        },
+    },
+    {
+        "JSONable": {
+            "coverage_from": "2022-05-01T00:00:00Z",
             "coverage_to": None,
         },
     },
 ]
 
-product_runs = [
+
+coverage_deltas = [
     {
-        # Minimal valid example for product run with a simple 24h coverage.
+        # Minimal valid example with a simple 24h coverage.
         "Python": {
-            "product_id": 1,
-            "available_at": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
+            "from_delta": timedelta(days=0),
+            "to_delta": timedelta(days=1),
+        },
+        "JSONable": {
+            "from_delta": "PT0S",
+            "to_delta": "P1D",
+        },
+    },
+    {
+        # With more interesting timedelta values.
+        "Python": {
+            # This is `-P0DT0H15M0S` might be realistic for PVForecast.
+            "from_delta": timedelta(days=0, seconds=-4500),
+            # This is `P1DT0H59M0S` might be realistic for PVForecast.
+            "to_delta": timedelta(days=1, seconds=3540),
+        },
+        "JSONable": {
+            "from_delta": "-PT1H15M",
+            "to_delta": "P1DT59M",
+        },
+    },
+]
+
+invalid_coverage_deltas = [
+    # Checks that all fields are required.
+    {
+        "JSONable": {
+            "to_delta": 86400,
+        },
+    },
+    {
+        "JSONable": {
+            "from_delta": 0.0,
+        },
+    },
+    # Checks that fields cannot be None
+    {
+        "JSONable": {
+            "from_delta": None,
+            "to_delta": 86400,
+        },
+    },
+    {
+        "JSONable": {
+            "from_delta": 0.0,
+            "to_delta": None,
+        },
+    },
+]
+
+
+request_tasks = [
+    {
+        # Minimal valid example for product run.
+        "Python": {
+            "service_id": 1,
         },
         "JSONable": {
             "id": None,
-            "product_id": 1,
+            "service_id": 1,
             "plant_ids": [],
-            "available_at": "2022-05-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
         },
     },
     {
         # With ID set.
         "Python": {
             "id": 2,
-            "product_id": 1,
-            "available_at": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
+            "service_id": 1,
         },
         "JSONable": {
             "id": 2,
-            "product_id": 1,
+            "service_id": 1,
             "plant_ids": [],
-            "available_at": "2022-05-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
         },
     },
     {
         # With plant ids set..
         "Python": {
-            "product_id": 1,
+            "service_id": 1,
             "plant_ids": [1, 2, 42],
-            "available_at": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
         },
         "JSONable": {
             "id": None,
-            "product_id": 1,
+            "service_id": 1,
             "plant_ids": [1, 2, 42],
-            "available_at": "2022-05-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
         },
     },
 ]
 
-invalid_product_runs = [
-    # Checks that required fields can't miss.
+invalid_request_tasks = [
+    # Checks that required fields (`service_id`) can't miss.
     {
-        "Python": {
-            "id": 2,
-            "available_at": datetime(2022, 4, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
-        },
         "JSONable": {
             "id": 2,
-            "available_at": "2022-04-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
-        },
-    },
-    {
-        "Python": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": datetime(2022, 4, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
-        },
-        "JSONable": {
-            "id": 2,
-            "product_id": 1,
-            "plant_id": 1,
-            "available_at": "2022-04-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
-        },
-    },
-    {
-        "Python": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": datetime(2022, 4, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-        },
-        "JSONable": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": "2022-04-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
         },
     },
     # Check not null constraints.
     {
-        "Python": {
-            "id": 2,
-            "product_id": None,
-            "available_at": datetime(2022, 4, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
-        },
         "JSONable": {
             "id": 2,
-            "product_id": None,
-            "available_at": "2022-04-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
-        },
-    },
-    {
-        "Python": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": None,
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
-        },
-        "JSONable": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": None,
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": "2022-05-02T00:00:00Z",
-        },
-    },
-    {
-        "Python": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": datetime(2022, 4, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": None,
-            "coverage_to": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
-        },
-        "JSONable": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": "2022-04-01T00:00:00Z",
-            "coverage_from": None,
-            "coverage_to": "2022-05-02T00:00:00Z",
-        },
-    },
-    {
-        "Python": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": datetime(2022, 4, 1, 0, tzinfo=timezone.utc),
-            "coverage_from": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "coverage_to": None,
-        },
-        "JSONable": {
-            "id": 2,
-            "product_id": 1,
-            "available_at": "2022-04-01T00:00:00Z",
-            "coverage_from": "2022-05-01T00:00:00Z",
-            "coverage_to": None,
+            "service_id": None,
         },
     },
 ]

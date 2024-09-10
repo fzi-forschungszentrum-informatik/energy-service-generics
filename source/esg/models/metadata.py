@@ -62,7 +62,7 @@ class GeographicPosition(_BaseModel):
 
 class GeographicPositionWithHeight(GeographicPosition):
     """
-    Defines the position of a point somewhere above Earth's surface.
+    Defines the position of a point somewhere _above_ Earth's surface.
     """
 
     height: float = Field(
@@ -77,6 +77,11 @@ class GeographicPositionWithHeight(GeographicPosition):
 
 
 class PVSystem(_BaseModel):
+    """
+    Minimal metadata of a PV system (beyond position) required to estimate
+    the power production of that plant.
+    """
+
     azimuth_angle: float = Field(
         examples=[0],
         ge=-90.0,
@@ -149,7 +154,7 @@ class Plant(_BaseModel):
         examples=["Karlsruhe city center"],
         description=(
             "A meaningful name for the plant. Should be short but precise. "
-            "Is used in e.g. in plots to analyses the product quality."
+            "May be used in plots to analyse the product quality etc."
         ),
     )
     geographic_position: Optional[GeographicPosition] = Field(
@@ -177,14 +182,13 @@ class Plant(_BaseModel):
     )
 
 
-# TODO: Make this a service. Remove the coverage fields.
-class Product(_BaseModel):
+class Service(_BaseModel):
     """
-    Defines the metadata for a product.
+    Defines the general metadata of a service.
     """
 
     id: Optional[int] = Field(
-        default=None,
+        None,
         examples=[1],
         description=("The ID of product object in the central database."),
     )
@@ -202,50 +206,94 @@ class Product(_BaseModel):
         examples=["https://service-provider.example.com/pv_forecast/v1/"],
         description=("The URL of the product service."),
     )
-    coverage_from: timedelta = Field(
+
+
+class Coverage(_BaseModel):
+    """
+    Defines the time span covered by a forecast or optimization output.
+    """
+
+    from_time: datetime = Field(
+        ...,
+        examples=[datetime.now(tz=timezone.utc) - timedelta(seconds=900)],
+        description=(
+            "The covered time span by a forecast or optimized schedule is "
+            "equal or larger this date and time."
+        ),
+    )
+    to_time: datetime = Field(
+        ...,
+        examples=[datetime.now(tz=timezone.utc) + timedelta(days=1)],
+        description=(
+            "The covered time span by this product run is less " "this value."
+        ),
+    )
+    available_at: Optional[datetime] = Field(
+        default=None,
+        description=(
+            "If set will make the service use only information available "
+            "before this date and time. This is relevant for generating "
+            "training data for ML applications."
+        ),
+    )
+
+
+class CoverageDelta(_BaseModel):
+    """
+    Like `Coverage` but relative to a time defined elsewhere.
+
+    This is useful to express information like, e.g. a forecast that usually
+    covers the next 24 hours.
+    """
+
+    from_delta: timedelta = Field(
         ...,
         examples=[-900],
         description=(
-            "For any run given time a product run is started this is the "
-            "difference between the start time and the begin of the covered "
-            "time range, i.e. the time range for which forecasts or schedules "
-            "are computed. E.g. if a run started at `2022-02-02T03:00:52` "
-            "and `coverage_from` is `P0DT01H15M00S` then we expect the first "
-            "forecasted value at time larger or equal `2022-02-02T04:15:52`."
+            "For any run given time a request task of a service is created "
+            "this time defines the difference of this time to the time the "
+            "coverage of the task begins or should begin. E.g. "
+            "if a task is created at `2022-02-02T03:00:52` and `from_delta' "
+            "is `P0DT01H15M00S` then we expect coverage from to be "
+            "set to `2022-02-02T04:15:52`."
         ),
     )
-    coverage_to: timedelta = Field(
+    to_delta: timedelta = Field(
         ...,
         examples=[89940],
         description=(
-            "For any run given time a product run is started this is the "
-            "difference between the start time and the end of the covered "
-            "time range, i.e. the time range for which forecasts or schedules "
-            "are computed. E.g. if a run started at `2022-02-02T03:00:52` "
-            "and `coverage_from` is `P0DT05H15M00S` then we expect the last "
-            "forecasted value at time less then `2022-02-02T08:15:52`."
+            "For any run given time a request task of a service is created "
+            "this time defines the difference of this time to the time the "
+            "coverage of the task ends or should end."
+            "E.g. if a task is created at `2022-02-02T03:00:52` and `to_delta' "
+            "is `P0DT05H15M00S` then we expect coverage to to be "
+            "set to `2022-02-02T08:15:52`."
         ),
     )
 
 
-# TODO: Make this a `RequestTask`. Move the times to dedicated model.
-class ProductRun(_BaseModel):
+class RequestTask(_BaseModel):
     """
-    Identifies the computed result of a product service at a certain
-    point in time. This should carry all information to repeat that
-    computation if required.
+    Metadata of a request task from the perspective of the calling entity.
+
+    This should contain all information required to repeat a task for any
+    arbitrary service, i.e. to resubmit the task to the service.
     """
 
     id: Optional[int] = Field(
         default=None,
         examples=[1],
-        description=("The ID of product run object in the central database."),
+        description=(
+            "The ID of request task if stored in a database. "
+            "NOTE: This is NOT the ID of the task used internally by "
+            "the service."
+        ),
     )
-    product_id: int = Field(
+    service_id: int = Field(
         ...,
         examples=[1],
         description=(
-            "The ID of the corresponding product object in the "
+            "The ID of the corresponding service metadata item in the "
             "central database."
         ),
     )
@@ -253,29 +301,7 @@ class ProductRun(_BaseModel):
         default=list(),
         examples=[[1]],
         description=(
-            "The IDs of the corresponding plant objects in the "
+            "The IDs of the corresponding plant metadata items in the "
             "central database."
-        ),
-    )
-    available_at: datetime = Field(
-        default=datetime.now(tz=timezone.utc),
-        description=(
-            "Will be forwarded to product services and trigger those to "
-            "compute only with data that has been available at this time."
-        ),
-    )
-    coverage_from: datetime = Field(
-        ...,
-        examples=[datetime.now(tz=timezone.utc) - timedelta(seconds=900)],
-        description=(
-            "The covered time span by this product run is equal or larger "
-            "this value."
-        ),
-    )
-    coverage_to: datetime = Field(
-        ...,
-        examples=[datetime.now(tz=timezone.utc) + timedelta(days=1)],
-        description=(
-            "The covered time span by this product run is less " "this value."
         ),
     )

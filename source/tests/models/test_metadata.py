@@ -60,17 +60,35 @@ class TestPlant(GenericMessageSerializationTest):
     invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_plants]
 
 
-class TestProduct(GenericMessageSerializationTest):
+class TestService(GenericMessageSerializationTest):
 
-    ModelClass = metadata.Product
-    msgs_as_python = [m["Python"] for m in td.products]
-    msgs_as_jsonable = [m["JSONable"] for m in td.products]
-    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_products]
+    ModelClass = metadata.Service
+    msgs_as_python = [m["Python"] for m in td.services]
+    msgs_as_jsonable = [m["JSONable"] for m in td.services]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_services]
 
 
-class TestProductRun(GenericMessageSerializationTest):
+class TestCoverage(GenericMessageSerializationTest):
 
-    ModelClass = metadata.ProductRun
-    msgs_as_python = [m["Python"] for m in td.product_runs]
-    msgs_as_jsonable = [m["JSONable"] for m in td.product_runs]
-    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_product_runs]
+    ModelClass = metadata.Coverage
+    msgs_as_python = [m["Python"] for m in td.coverages]
+    msgs_as_jsonable = [m["JSONable"] for m in td.coverages]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_coverages]
+
+
+class TestCoverageDelta(GenericMessageSerializationTest):
+
+    ModelClass = metadata.CoverageDelta
+    msgs_as_python = [m["Python"] for m in td.coverage_deltas]
+    msgs_as_jsonable = [m["JSONable"] for m in td.coverage_deltas]
+    invalid_msgs_as_jsonable = [
+        m["JSONable"] for m in td.invalid_coverage_deltas
+    ]
+
+
+class TestRequestTask(GenericMessageSerializationTest):
+
+    ModelClass = metadata.RequestTask
+    msgs_as_python = [m["Python"] for m in td.request_tasks]
+    msgs_as_jsonable = [m["JSONable"] for m in td.request_tasks]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_request_tasks]
