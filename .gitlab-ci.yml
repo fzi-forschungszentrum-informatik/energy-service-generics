@@ -13,7 +13,6 @@ variables:
   # These are required to allow communication with the DIND container.
   DOCKER_HOST: tcp://dockerhost:2375
   DOCKER_TLS_CERTDIR: ""
-  DOCKER_DRIVER: overlay
 
 # Generic code for jobs executing docker commands.
 .docker_jobs_common: &docker_jobs_common
