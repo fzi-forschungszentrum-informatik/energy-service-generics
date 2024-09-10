@@ -1095,14 +1095,14 @@ class TestPostRequest(PostEndpointTests):
                 "loc": ["arguments", "argument_as_float"],
                 "msg": "Field required",
                 "input": {"noFieldInModel": "foo bar"},
-                "url": "https://errors.pydantic.dev/2.8/v/missing",
+                "url": "https://errors.pydantic.dev/2.9/v/missing",
             },
             {
                 "type": "missing",
                 "loc": ["parameters"],
                 "msg": "Field required",
                 "input": {"arguments": {"noFieldInModel": "foo bar"}},
-                "url": "https://errors.pydantic.dev/2.8/v/missing",
+                "url": "https://errors.pydantic.dev/2.9/v/missing",
             },
         ]
     }
@@ -1135,14 +1135,14 @@ class TestPostFitParameters(PostEndpointTests):
                 "loc": ["arguments", "argument_as_float"],
                 "msg": "Field required",
                 "input": {"noFieldInModel": "foo bar"},
-                "url": "https://errors.pydantic.dev/2.8/v/missing",
+                "url": "https://errors.pydantic.dev/2.9/v/missing",
             },
             {
                 "type": "missing",
                 "loc": ["observations"],
                 "msg": "Field required",
                 "input": {"arguments": {"noFieldInModel": "foo bar"}},
-                "url": "https://errors.pydantic.dev/2.8/v/missing",
+                "url": "https://errors.pydantic.dev/2.9/v/missing",
             },
         ]
     }
