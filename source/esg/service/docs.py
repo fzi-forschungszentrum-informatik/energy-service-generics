@@ -20,7 +20,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 
-def get_api_docs_from_description_file(self, description_path):
+def get_api_docs_from_description_file(description_path):
     """
     Extract API `title` and `description` from markdown file.
 
