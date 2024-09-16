@@ -38,7 +38,6 @@ class TaskId(_BaseModel):
     """
 
     task_ID: UUID = Field(
-        None,
         description=(
             "The ID of the created task. Must use this ID to task "
             "the status or result of the task."

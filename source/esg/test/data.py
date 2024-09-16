@@ -45,6 +45,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 from datetime import datetime, timezone, timedelta
+from uuid import UUID
 
 from esg.test.tools import copy_test_data
 
@@ -1794,6 +1795,80 @@ invalid_request_templates = [
         "JSONable": {
             "service_id": 1,
             "coverage_delta": None,
+        },
+    },
+]
+
+###############################################################################
+#
+# Models defined in `esg.models.task`
+#
+###############################################################################
+
+task_ids = [
+    # Minimal valid example.
+    {
+        "Python": {
+            "task_ID": UUID("62a7f1da-7414-11ef-baa0-bab15e376c36"),
+        },
+        "JSONable": {
+            "task_ID": "62a7f1da-7414-11ef-baa0-bab15e376c36",
+        },
+    },
+]
+
+invalid_task_ids = [
+    # Can't be `None`
+    {
+        "JSONable": {
+            "task_ID": None,
+        },
+    },
+    # Possible error encountered while migrating old services with the
+    # notation format prior to the OES paper.
+    {
+        "JSONable": {
+            "request_ID": "62a7f1da-7414-11ef-baa0-bab15e376c36",
+        },
+    },
+]
+
+task_statuses = [
+    # Minimal valid example.
+    {
+        "Python": {"status_text": "running"},
+        "JSONable": {
+            "status_text": "running",
+            "percent_complete": None,
+            "ETA_seconds": None,
+        },
+    },
+    # All fields populated.
+    {
+        "Python": {
+            "status_text": "running",
+            "percent_complete": 27.1,
+            "ETA_seconds": 15.7,
+        },
+        "JSONable": {
+            "status_text": "running",
+            "percent_complete": 27.1,
+            "ETA_seconds": 15.7,
+        },
+    },
+]
+
+invalid_task_statuses = [
+    # status_text can't be `None`
+    {
+        "JSONable": {
+            "status_text": None,
+        },
+    },
+    # Not allowed value for status_text
+    {
+        "JSONable": {
+            "status_text": "unknown status",
         },
     },
 ]

@@ -17,102 +17,22 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-import uuid
-import json
-
 from esg.models import task
+from esg.test import data as td
+from esg.test.generic_tests import GenericMessageSerializationTest
 
 
-class TestTaskId:
-    def test_data_to_json(self):
-        """
-        Test conversion to JSON for all fields.
-        """
-        expected_json_content = {
-            "task_ID": str(uuid.uuid1()),
-        }
-        actual_json = task.TaskId(**expected_json_content).model_dump_json()
-        assert json.loads(actual_json) == expected_json_content
+class TestTaskId(GenericMessageSerializationTest):
 
-    def test_json_to_data(self):
-        """
-        Test JSON can be parsed to Python objects.
-        """
-        test_uuid = str(uuid.uuid1())
-        test_json = """
-            {
-                "task_ID": "%s"
-            }
-        """
-        test_json = test_json % test_uuid
-        expected_data = {
-            "task_ID": test_uuid,
-        }
-        actual_data = task.TaskId.model_validate_json(test_json)
-        assert actual_data == task.TaskId(**expected_data)
+    ModelClass = task.TaskId
+    msgs_as_python = [m["Python"] for m in td.task_ids]
+    msgs_as_jsonable = [m["JSONable"] for m in td.task_ids]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_task_ids]
 
 
-class TestTaskStatus:
-    def test_data_to_json(self):
-        """
-        Test conversion to JSON for all fields.
-        """
-        expected_json_content = {
-            "status_text": "running",
-            "percent_complete": 27.1,
-            "ETA_seconds": 15.7,
-        }
-        actual_json = task.TaskStatus(**expected_json_content).model_dump_json()
-        assert json.loads(actual_json) == expected_json_content
+class TestTaskStatus(GenericMessageSerializationTest):
 
-    def test_json_to_data(self):
-        """
-        Test JSON can be parsed to Python objects.
-        """
-        test_json = """
-            {
-                "status_text": "running",
-                "percent_complete": 27.1,
-                "ETA_seconds": 15.7
-            }
-        """
-        expected_data = {
-            "status_text": "running",
-            "percent_complete": 27.1,
-            "ETA_seconds": 15.7,
-        }
-        actual_data = task.TaskStatus.model_validate_json(test_json)
-        assert actual_data.model_dump() == expected_data
-
-    def test_data_to_json_without_optional(self):
-        """
-        Test conversion to JSON if only non optional values are provided.
-        """
-        expected_json_content = {
-            "status_text": "running",
-            "percent_complete": None,
-            "ETA_seconds": None,
-        }
-        actual_json = task.TaskStatus(
-            status_text=expected_json_content["status_text"]
-        ).model_dump_json()
-        print(actual_json)
-        assert json.loads(actual_json) == expected_json_content
-
-    def test_json_to_data_without_optional(self):
-        """
-        Test JSON can be parsed to Python objects even if only non optional
-        values are given in the JSON.
-        """
-        test_json = """
-            {
-                "status_text": "running"
-            }
-        """
-        expected_data = {
-            "status_text": "running",
-            "percent_complete": None,
-            "ETA_seconds": None,
-        }
-        actual_data = task.TaskStatus.model_validate_json(test_json)
-        assert actual_data.model_dump() == expected_data
+    ModelClass = task.TaskStatus
+    msgs_as_python = [m["Python"] for m in td.task_statuses]
+    msgs_as_jsonable = [m["JSONable"] for m in td.task_statuses]
+    invalid_msgs_as_jsonable = [m["JSONable"] for m in td.invalid_task_statuses]
