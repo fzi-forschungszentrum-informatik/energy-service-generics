@@ -23,9 +23,12 @@ SPDX-License-Identifier: Apache-2.0
 import asyncio
 from copy import deepcopy
 from multiprocessing import Process
+from uuid import uuid1
 from time import sleep
 
 import pytest
+
+from esg.models.task import TaskId, TaskStatus
 
 
 def async_return(return_value=None, loop=None):
@@ -123,3 +126,75 @@ class APIInProcess:
         # XXX: This is super important, as the next test will else
         #      not be able to spin up the server again.
         self.process.join()
+
+
+class GenericServiceMock:
+    """
+    A tool to mock external services using the ESG framework.
+    """
+
+    def __init__(self, httpserver):
+        self.httpserver = httpserver
+
+    def get_base_url(self):
+        """
+        Return the base_url of the mocked service.
+
+        Returns.
+        --------
+        base_url : str
+            The root URL of the service API, e.g. `http://localhost:8800`
+        """
+        return self.httpserver.url_for("")[:-1]
+
+    def add_expected_call(
+        self, endpoint, response_jsonable, body_jsonable=None, check_body=False
+    ):
+        """
+        Make the service mock expect request or fit-parameters call.
+
+        Arguments:
+        ----------
+        endpoint : str
+            Usually either `"request"` or `"fit-parameters"`.
+        response_jsonable : something JSONable
+            If matched, this will be returned to the client.
+        body_jsonable : something JSONable
+            The server will only respond if POST call contains
+            a similar parsed JSON object as body.
+            NOTE: None doesn't seem to disable the check, it seems to say
+                  we expect an empty body.
+        check_body : bool
+            If `False` will ignore `body_jsonable`.
+        """
+        expected_root_request = self.httpserver.expect_request(
+            "/", method="GET"
+        )
+        expected_root_request.respond_with_json({})
+
+        task_uuid = str(uuid1())
+
+        if check_body:
+            expected_post_request = self.httpserver.expect_request(
+                f"/{endpoint}/", json=body_jsonable, method="POST"
+            )
+        else:
+            expected_post_request = self.httpserver.expect_request(
+                f"/{endpoint}/", method="POST"
+            )
+
+        expected_post_request.respond_with_json(
+            TaskId(task_ID=task_uuid).model_dump_jsonable()
+        )
+
+        expected_status_request = self.httpserver.expect_request(
+            f"/{endpoint}/{task_uuid}/status/", method="GET"
+        )
+        expected_status_request.respond_with_json(
+            TaskStatus(status_text="running").model_dump_jsonable()
+        )
+
+        expected_result_request = self.httpserver.expect_request(
+            f"/{endpoint}/{task_uuid}/result/", method="GET"
+        )
+        expected_result_request.respond_with_json(response_jsonable)
