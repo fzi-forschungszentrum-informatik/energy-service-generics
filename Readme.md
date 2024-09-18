@@ -67,6 +67,12 @@ One you are finished get rid of the containers with:
 docker compose down
 ```
 
+A shortcut (without building) for executing just the tests is:
+
+```bash
+docker compose up --no-log-prefix energy-service-generics-devl-autotest
+```
+
 ## Contact
 
 Please open a GitHub issue for any inquiry that relates to the source code. Feel free to contact [David Wölfle](https://www.fzi.de/team/david-woelfle/) directly for all other inquiries.

@@ -175,11 +175,11 @@ class GenericServiceMock:
         task_uuid = str(uuid1())
 
         if check_body:
-            expected_post_request = self.httpserver.expect_request(
+            expected_post_request = self.httpserver.expect_oneshot_request(
                 f"/{endpoint}/", json=body_jsonable, method="POST"
             )
         else:
-            expected_post_request = self.httpserver.expect_request(
+            expected_post_request = self.httpserver.expect_oneshot_request(
                 f"/{endpoint}/", method="POST"
             )
 
@@ -187,14 +187,14 @@ class GenericServiceMock:
             TaskId(task_ID=task_uuid).model_dump_jsonable()
         )
 
-        expected_status_request = self.httpserver.expect_request(
+        expected_status_request = self.httpserver.expect_oneshot_request(
             f"/{endpoint}/{task_uuid}/status/", method="GET"
         )
         expected_status_request.respond_with_json(
             TaskStatus(status_text="running").model_dump_jsonable()
         )
 
-        expected_result_request = self.httpserver.expect_request(
+        expected_result_request = self.httpserver.expect_oneshot_request(
             f"/{endpoint}/{task_uuid}/result/", method="GET"
         )
         expected_result_request.respond_with_json(response_jsonable)
