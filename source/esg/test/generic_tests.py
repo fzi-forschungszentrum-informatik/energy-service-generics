@@ -26,6 +26,7 @@ import pytest
 
 from esg.clients.service import GenericServiceClient
 from esg.test.tools import APIInProcess
+from esg.test.tools import TestClassWithFixtures
 
 
 class GenericMessageSerializationTest:
@@ -215,12 +216,14 @@ class GenericMessageSerializationTestBEMcom(GenericMessageSerializationTest):
             assert actual_msg_as_obj == expected_msg_as_obj
 
 
-class GenericWorkerTaskTest:
+class GenericWorkerTaskTest(TestClassWithFixtures):
     """
     Tests for checking that the worker tasks are correctly implemented.
 
     Attributes:
     -----------
+    fixture_names : list of str
+        If provided, any fixture names listed here will be added to all tests.
     tested_task : method decorated as Celery task.
         The task that should be tested.
     input_data_jsonable : list of anything.
@@ -231,9 +234,20 @@ class GenericWorkerTaskTest:
         for each item in the input.
     """
 
+    fixture_names = ()
     task_to_test = None
     input_data_jsonable = None
     output_data_jsonable = None
+
+    def assert_output_equal(
+        self, actual_output_jsonable, expected_output_jsonable
+    ):
+        """
+        Allows us to overload the way how the jsonables are compared.
+
+        This is useful in case that you e.g. wish to accept slight variations.
+        """
+        assert actual_output_jsonable == expected_output_jsonable
 
     def test_direct_call_possible(self):
         """
@@ -245,7 +259,9 @@ class GenericWorkerTaskTest:
             actual_output_json = self.task_to_test(input_json)
             actual_output_jsonable = json.loads(actual_output_json)
 
-            assert actual_output_jsonable == expected_output_jsonable
+            self.assert_output_equal(
+                actual_output_jsonable, expected_output_jsonable
+            )
 
     def test_sync_call_possible(self):
         """
@@ -262,10 +278,12 @@ class GenericWorkerTaskTest:
             actual_output_json = async_result.get()
             actual_output_jsonable = json.loads(actual_output_json)
 
-            assert actual_output_jsonable == expected_output_jsonable
+            self.assert_output_equal(
+                actual_output_jsonable, expected_output_jsonable
+            )
 
 
-class GenericFOOCTest:
+class GenericFOOCTest(TestClassWithFixtures):
     """
     Rudimentary test for the forecasting or optimization component.
 
@@ -276,6 +294,8 @@ class GenericFOOCTest:
 
     Attributes:
     -----------
+    fixture_names : list of str
+        If provided, any fixture names listed here will be added to all tests.
     InputDataModel : Pydantic model
         The data model used to parse Python data from `input_data_json`.
     payload_function : function
@@ -291,11 +311,22 @@ class GenericFOOCTest:
         for each item in the input.
     """
 
+    fixture_names = ()
     InputDataModel = None
     payload_function = None
     OutputDataModel = None
     input_data_jsonable = None
     output_data_jsonable = None
+
+    def assert_output_equal(
+        self, actual_output_jsonable, expected_output_jsonable
+    ):
+        """
+        Allows us to overload the way how the jsonables are compared.
+
+        This is useful in case that you e.g. wish to accept slight variations.
+        """
+        assert actual_output_jsonable == expected_output_jsonable
 
     def get_payload_function(self):
         """
@@ -319,7 +350,9 @@ class GenericFOOCTest:
             actual_output = self.OutputDataModel.model_validate(output_data)
             actual_output_jsonable = json.loads(actual_output.model_dump_json())
 
-            assert actual_output_jsonable == expected_output_jsonable
+            self.assert_output_equal(
+                actual_output_jsonable, expected_output_jsonable
+            )
 
 
 class GenericAPITest:
