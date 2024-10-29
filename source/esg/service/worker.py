@@ -86,6 +86,14 @@ def celery_app_from_environ():
             **generic_useful_options,
         )
         return app
+    elif "amqp://" in broker_url:
+        app = Celery(
+            name,
+            broker_url=broker_url,
+            result_backend="rpc://",
+            **generic_useful_options,
+        )
+        return app
     else:
         raise ValueError(
             f'`CELERY__BROKER_URL` set to `"{broker_url}"` which is not '
