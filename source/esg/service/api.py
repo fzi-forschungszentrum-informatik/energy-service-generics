@@ -230,7 +230,6 @@ class API:
         RequestOutput,
         request_task,
         title,
-        version,
         FitParameterArguments=None,
         Observations=None,
         FittedParameters=None,
@@ -253,6 +252,9 @@ class API:
         ----------------------
         LOGLEVEL : str
             The loglevel to use for *all* loggers. Defaults to logging.INFO.
+        VERSION : str
+            The version of the service. Is used to extend the schema
+            documentation and to check the `ROOT_PATH`.
         ROOT_PATH : str
             Allows serving the service under a subpath, e.g.
             `"https://example.com/service-1/v1/"` would require setting
@@ -293,9 +295,6 @@ class API:
         title : str
             The title (aka name) of the service. Forwarded to FastAPI, see also:
             https://fastapi.tiangolo.com/tutorial/metadata/
-        version : `packaging.version.Version` instance
-            The version of the service. Is used to extend the schema
-            documentation.
         FitParameterArguments : pydantic model
             A model defining the structure of the  arguments that are required
             to fit the parameters.
@@ -312,7 +311,9 @@ class API:
             https://fastapi.tiangolo.com/tutorial/metadata/
         version_root_path : str or None
             Can be used to specify the version name expected in root path.
-            If `None` or empty will default to `f"v{version.major}"`.
+            If `None` or empty will default to `f"v{VERSION.major}"` in case
+            the version number appears to be a semantic version number. In any
+            case defaults to `VERSION`.
         fastapi_kwargs : dict
             Additional keyword arguments passed to FastAPI(), May be useful
             to extend schema docs.
@@ -377,9 +378,23 @@ class API:
             logging.getLogger(logger_name).setLevel(self._loglevel)
 
         # Load and check root path for service.
-        fastapi_root_path = os.getenv("ROOT_PATH") or f"/v{version.major}"
+        version = os.getenv("VERSION")
+        if not version:
+            raise ValueError(
+                "Service needs a version for operation. Try setting the "
+                "`VERSION` environment variable."
+            )
+
         if version_root_path is None:
-            version_root_path = f"v{version.major}"
+            version_parts = version.split(".")
+            if len(version_parts) > 1 and version_parts[0].isdigit():
+                # OK, so there is at least one dot that could separate a major
+                # and minor version and the major part is an int.
+                version_root_path = f"v{version_parts[0]}"
+            else:
+                version_root_path = f"{version}"
+
+        fastapi_root_path = os.getenv("ROOT_PATH") or f"/{version_root_path}"
         if fastapi_root_path[0] != "/" or fastapi_root_path[-1] == "/":
             raise ValueError(
                 "`ROOT_PATH` must have a leading and no trailing slash. "
@@ -458,7 +473,7 @@ class API:
             docs_url="/",
             redoc_url=None,
             root_path=fastapi_root_path,
-            version=str(version),
+            version=version,
             dependencies=dependencies,
             post_body_models_by_path=post_body_models_by_path,
             **fastapi_kwargs,

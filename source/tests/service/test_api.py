@@ -31,7 +31,6 @@ from typing import Optional
 
 from fastapi import FastAPI
 import jwt
-from packaging.version import Version
 import pytest
 import requests
 
@@ -105,13 +104,18 @@ API_DEFAULT_KWARGS = {
     "RequestOutput": DummyRequestOutput,
     "request_task": MagicMock(),
     "title": "TestService",
-    "version": Version("0.0.1"),
     "FitParameterArguments": DummyFitParameterArguments,
     "Observations": DummyObservations,
     "FittedParameters": DummyFittedParameters,
     "fit_parameters_task": MagicMock(),
     "description": "A nice service for testing.",
 }
+
+
+@pytest.fixture(autouse=True)
+def inject_version_number():
+    with patch.dict(os.environ, {"VERSION": "0.1.2"}):
+        yield
 
 
 @pytest.fixture(scope="session")
@@ -190,11 +194,11 @@ class TestApiInit:
         envs = {
             "LOGLEVEL": "CRITICAL",
             "ROOT_PATH": "/test/v1",
+            "VERSION": "1.2.3",
         }
 
-        api_kwargs = API_DEFAULT_KWARGS | {"version": Version("1.2.3")}
         with patch.dict(os.environ, envs):
-            api = API(**api_kwargs)
+            api = API(**API_DEFAULT_KWARGS)
 
         assert api._loglevel == logging.CRITICAL
         assert api.fastapi_app.root_path == "/test/v1"
@@ -207,22 +211,33 @@ class TestApiInit:
         envs = {
             "LOGLEVEL": "",
             "ROOT_PATH": "",
+            "VERSION": "2.3.4",
         }
 
-        api_kwargs = API_DEFAULT_KWARGS | {"version": Version("2.3.4")}
         with patch.dict(os.environ, envs):
-            api = API(**api_kwargs)
+            api = API(**API_DEFAULT_KWARGS)
 
         assert api._loglevel == logging.INFO
         assert api.fastapi_app.root_path == "/v2"
+
+    def test_version_environment_variable_raises_if_not_set(self):
+        """
+        The service definitely needs a version number. Hence we cannot
+        start the service without it.
+        """
+        envs = {
+            "VERSION": "",
+        }
+
+        with patch.dict(os.environ, envs):
+            with pytest.raises(ValueError):
+                _ = API(**API_DEFAULT_KWARGS)
 
     def test_root_path_checked(self):
         """
         By convention the root path should contain the version info
         on the last path segment.
         """
-        api_kwargs = API_DEFAULT_KWARGS | {"version": Version("2.3.4")}
-
         invalid_root_paths = [
             " ",  # No version at all.
             "a/v2/",  # Valid version but no leading slash.
@@ -235,9 +250,10 @@ class TestApiInit:
 
         for invalid_root_path in invalid_root_paths:
             print(f"Testing {invalid_root_path}")
-            with patch.dict(os.environ, {"ROOT_PATH": invalid_root_path}):
+            envs = {"ROOT_PATH": invalid_root_path, "VERSION": "2.3.4"}
+            with patch.dict(os.environ, envs):
                 with pytest.raises(ValueError):
-                    _ = API(**api_kwargs)
+                    _ = API(**API_DEFAULT_KWARGS)
 
     def test_version_root_path_overloads(self):
         """
@@ -251,12 +267,9 @@ class TestApiInit:
         version_root_path = "some-branch"
         root_path = f"/test/{version_root_path}"
 
-        envs = {
-            "ROOT_PATH": root_path,
-        }
+        envs = {"ROOT_PATH": root_path, "VERSION": version}
 
         api_kwargs = API_DEFAULT_KWARGS | {
-            "version": version,
             "version_root_path": version_root_path,
         }
         with patch.dict(os.environ, envs):
