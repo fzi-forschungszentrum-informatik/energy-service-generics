@@ -255,6 +255,23 @@ class TestApiInit:
                 with pytest.raises(ValueError):
                     _ = API(**API_DEFAULT_KWARGS)
 
+    def test_devl_version_accepted(self):
+        """
+        We often wish to deploy a service with the version set to a git
+        branch name plus a commit (short) ID. This should be accepted too.
+
+        This does not use version_root_path as the latter makes automatic
+        deployments more complicated.
+        """
+        version = "some_branch(ef9eb864)"
+        root_path = "/test/some_branch"
+
+        envs = {"ROOT_PATH": root_path, "VERSION": version}
+        with patch.dict(os.environ, envs):
+            api = API(**API_DEFAULT_KWARGS)
+
+        assert api.fastapi_app.root_path == root_path
+
     def test_version_root_path_overloads(self):
         """
         Check that we can overload the expected version number in `ROOT_PATH`.
@@ -263,8 +280,8 @@ class TestApiInit:
         for each branch the last commit is deployed. Additionally the commit
         ID is appended to the displayed version number.
         """
-        version = "some branch (ef9eb864)"
-        version_root_path = "some-branch"
+        version = "some_branch(ef9eb864)"
+        version_root_path = "some_branch"
         root_path = f"/test/{version_root_path}"
 
         envs = {"ROOT_PATH": root_path, "VERSION": version}

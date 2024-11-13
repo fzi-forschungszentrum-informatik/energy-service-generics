@@ -391,6 +391,10 @@ class API:
                 # OK, so there is at least one dot that could separate a major
                 # and minor version and the major part is an int.
                 version_root_path = f"v{version_parts[0]}"
+            elif "(" == version[-10] and ")" == version[-1]:
+                # Allow development versions too. That is a version like
+                # `f"{branch_name}({short_commit_id})"`
+                version_root_path = f"{version.split('(')[0]}"
             else:
                 version_root_path = f"{version}"
 
@@ -402,7 +406,8 @@ class API:
             )
         if fastapi_root_path.split("/")[-1] != version_root_path:
             raise ValueError(
-                "`ROOT_PATH` must contain version number at last path element. "
+                "`ROOT_PATH` must contain a version information as last "
+                f"path element.\nExpected to find: {version_root_path}\n"
                 f"Got instead: {fastapi_root_path}"
             )
 
