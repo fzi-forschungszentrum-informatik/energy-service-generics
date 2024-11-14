@@ -272,6 +272,20 @@ class TestApiInit:
 
         assert api.fastapi_app.root_path == root_path
 
+    def test_devl_version_short_accepted(self):
+        """
+        In addition to `test_devl_version_accepted` some people
+        might have a short branch name and use it directly as version.
+        """
+        version = "main"
+        root_path = "/test/main"
+
+        envs = {"ROOT_PATH": root_path, "VERSION": version}
+        with patch.dict(os.environ, envs):
+            api = API(**API_DEFAULT_KWARGS)
+
+        assert api.fastapi_app.root_path == root_path
+
     def test_version_root_path_overloads(self):
         """
         Check that we can overload the expected version number in `ROOT_PATH`.

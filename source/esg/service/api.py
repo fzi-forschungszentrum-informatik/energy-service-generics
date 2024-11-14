@@ -391,7 +391,9 @@ class API:
                 # OK, so there is at least one dot that could separate a major
                 # and minor version and the major part is an int.
                 version_root_path = f"v{version_parts[0]}"
-            elif "(" == version[-10] and ")" == version[-1]:
+            elif (
+                len(version) > 10 and "(" == version[-10] and ")" == version[-1]
+            ):
                 # Allow development versions too. That is a version like
                 # `f"{branch_name}({short_commit_id})"`
                 version_root_path = f"{version.split('(')[0]}"
