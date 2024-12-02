@@ -27,6 +27,7 @@ from unittest.mock import patch
 from uuid import UUID
 from typing import Annotated
 
+import asyncio
 from fastapi import Depends
 from fastapi import FastAPI
 from fastapi import Header
@@ -582,6 +583,40 @@ class API:
         # This might be used in future. It is currently not.
         request.scope["granted_roles"] = granted_roles
 
+    async def wait_for_task_id_available(self, task):
+        """
+        Return the task ID once it is available.
+
+        This ensures that the ID is only returned AFTER the querying the status
+        endpoint with this ID would lead to 404, which will only be the case
+        once the worker has picked up the task for the first time. If this
+        hasn't happened in 30 seconds we assume an issue and return a 500
+        to inform the client that the task might not have been queued.
+
+        If this logic is an issue in the future consider returning a custom
+        status instead. See e.g. here:
+        https://celery.school/custom-celery-task-states
+
+        Arguments:
+        ----------
+        task : Task instance
+            The celery task that has been created by the POST endpoint.
+
+        Raises:
+        --------
+        GenericUnexpectedException:
+            I.e. a 500 if the task has not been picked up by a worker in 30s.
+        """
+
+        retry = 1
+        max_retries = 300
+        while True:
+            await asyncio.sleep(0.1)
+            if task.state != states.PENDING:
+                return
+            if retry >= max_retries:
+                raise GenericUnexpectedException()
+
     async def post_request(self, request: Request):
         """
         Handle post calls to the request endpoint.
@@ -603,6 +638,7 @@ class API:
         # that we need to serialize the parsed data again.
         task = self.request_task.delay(input_data_json=raw_body)
 
+        await self.wait_for_task_id_available(task=task)
         return TaskId(task_ID=task.id)
 
     async def post_fit_parameters(self, request: Request):
@@ -626,6 +662,7 @@ class API:
         # that we need to serialize the parsed data again.
         task = self.fit_parameters_task.delay(input_data_json=raw_body)
 
+        await self.wait_for_task_id_available(task=task)
         return TaskId(task_ID=task.id)
 
     async def get_status(self, task_id: UUID):

@@ -53,6 +53,13 @@ def celery_app_from_environ():
         # annoying deprecation warning in the logs. See for details:
         # https://docs.celeryq.dev/en/stable/userguide/configuration.html#broker-connection-retry-on-startup
         "broker_connection_retry_on_startup": True,
+        # No running state (will 404 instead) of tasks without this option.
+        # Background is that the `STARTED` state is not communicated by default.
+        # See further:
+        # https://docs.celeryq.dev/en/latest/userguide/tasks.html#started
+        # as well as:
+        # https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/blob/3a7c91d4dd0c6b245c780051d43b8f60606c01c0/source/esg/service/api.py#L72
+        "task_track_started": True,
     }
 
     broker_url = os.getenv("CELERY__BROKER_URL")

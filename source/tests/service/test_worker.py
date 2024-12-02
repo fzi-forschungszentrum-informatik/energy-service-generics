@@ -124,6 +124,7 @@ class TestCeleryAppFromEnviron:
         `generic_useful_options` have been forwarded to the Celery app.
         """
         assert app.conf.broker_connection_retry_on_startup is True
+        assert app.conf.task_track_started is True
 
     def test_fs_transport_creates_folders_and_returns_app(self):
         """
