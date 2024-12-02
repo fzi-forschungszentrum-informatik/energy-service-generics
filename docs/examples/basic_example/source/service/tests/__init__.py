@@ -17,8 +17,16 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
+import os
 import sys
 from pathlib import Path
 
 parent_dir = str(Path(__file__).parent.parent.absolute())
 sys.path.insert(0, parent_dir)
+
+# GOTCHA: This is super important here! The tests will not be able to import
+# from `worker` (or `api` as the latter imports `worker`) as this issues a
+# call to `celery_app_from_environ` which needs these settings to run.
+os.environ["CELERY__NAME"] = "test_name"
+os.environ["CELERY__BROKER_URL"] = "filesystem://"
+os.environ["CELERY__FS_TRANSPORT_BASE_FOLDER"] = "/tmp/"
