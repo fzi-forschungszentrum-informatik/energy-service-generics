@@ -44,6 +44,7 @@ class HttpBaseClient:
         self,
         base_url,
         verify=True,
+        skip_verify_warning=False,
         username=None,
         password=None,
         check_on_init=True,
@@ -60,6 +61,10 @@ class HttpBaseClient:
             Useful if self signed certificates are used but a potential
             security risk. See also the requests docs on the topic:
             https://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+        skip_verify_warning: bool
+            Allows you to mute the warning you usually get if you set `verify`
+            to `False`. In some cases, e.g. benchmarking, this is a good idea
+            to reduce noise in the logs.
         username: str
             The username to use for HTTP basic auth. Only used in combination
             with `password`.
@@ -75,12 +80,13 @@ class HttpBaseClient:
         # urllib3 would emit one warning for EVERY call without verification.
         if not self.verify:
             disable_warnings()
-            # This is basically the same warning urllib3 emits, but just once.
-            logger.warning(
-                "Client will make unverified HTTPS request to host `{}`. "
-                "Adding certificate verification is strongly advised."
-                "".format(self.base_url)
-            )
+            if skip_verify_warning is False:
+                # This is basically the same warning urllib3 emits, but just once.
+                logger.warning(
+                    "Client will make unverified HTTPS request to host `{}`. "
+                    "Adding certificate verification is strongly advised."
+                    "".format(self.base_url)
+                )
 
         self.http = requests.Session()
 
