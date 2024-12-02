@@ -199,7 +199,7 @@ class GenericServiceClient(HttpBaseClient):
                     # Nothing left to check.
                     break
 
-            if not task_ids_to_check:
+            if task_status.status_text == "ready" and not task_ids_to_check:
                 # This point will only be reached if all tasks are ready.
                 self.all_tasks_finished = True
                 return
