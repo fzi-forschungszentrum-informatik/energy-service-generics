@@ -17,14 +17,15 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-from packaging.version import Version
-
+from data_model import (
+    FitParameterArguments,
+    FittedParameters,
+    Observations,
+    RequestArguments,
+    RequestOutput,
+)
 from esg.service.api import API
-
-from data_model import RequestArguments, RequestOutput
-from data_model import FittedParameters, Observations
-from data_model import FitParameterArguments
-from worker import request_task, fit_parameters_task
+from worker import fit_parameters_task, request_task
 
 api = API(
     RequestArguments=RequestArguments,
@@ -35,7 +36,6 @@ api = API(
     request_task=request_task,
     fit_parameters_task=fit_parameters_task,
     title="PV Power Prediction Example Service",
-    version=Version("0.0.1"),
 )
 
 if __name__ == "__main__":
