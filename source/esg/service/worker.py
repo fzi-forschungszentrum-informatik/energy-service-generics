@@ -63,6 +63,7 @@ def celery_app_from_environ():
     }
 
     broker_url = os.getenv("CELERY__BROKER_URL")
+    result_backend = os.getenv("CELERY__RESULT_BACKEND")
     if not broker_url:
         raise ValueError(
             "Broker URL not defined. Try setting the "
@@ -93,7 +94,17 @@ def celery_app_from_environ():
             **generic_useful_options,
         )
         return app
+    elif result_backend:
+        # Result backend specified? Ok use whatever is there.
+        app = Celery(
+            name,
+            broker_url=broker_url,
+            result_backend=result_backend,
+            **generic_useful_options,
+        )
+        return app
     elif "amqp://" in broker_url:
+        # AMQP and no results backend? -> Use AMQP as results backend too.
         app = Celery(
             name,
             broker_url=broker_url,
