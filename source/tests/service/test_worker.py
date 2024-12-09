@@ -124,6 +124,7 @@ class TestCeleryAppFromEnviron:
         `generic_useful_options` have been forwarded to the Celery app.
         """
         assert app.conf.broker_connection_retry_on_startup is True
+        assert app.conf.task_track_started is True
 
     def test_fs_transport_creates_folders_and_returns_app(self):
         """
@@ -169,7 +170,7 @@ class TestCeleryAppFromEnviron:
     def test_amqp_returns_app(self):
         """
         For AMQP broker we expect an app back and automatic set for RPC
-        backend, the latter at least for now.
+        backend, if no other backend is specified.
         """
         test_broker_url = "amqp://user:pass@broker:1234/vhost"
         test_environ = {
@@ -186,6 +187,32 @@ class TestCeleryAppFromEnviron:
         assert app.main == "test_name"
         assert app.conf.broker_url == test_broker_url
         assert app.conf.result_backend == "rpc://"
+
+        # Finally, check for the generic options.
+        self.verify_generic_options_in_app(app)
+
+    def test_amqp_plus_redis_returns_app(self):
+        """
+        For AMQP broker we expect an ann app with the AMQP settings and the
+        backend set to whatever we specified.
+        """
+        test_broker_url = "amqp://user:pass@broker:1234/vhost"
+        test_result_backend = "redis://localhost:6379/0"
+        test_environ = {
+            "CELERY__NAME": "test_name",
+            "CELERY__BROKER_URL": test_broker_url,
+            "CELERY__RESULT_BACKEND": test_result_backend,
+        }
+        with patch.dict(os.environ, test_environ):
+            app = celery_app_from_environ()
+
+        # Check that we have received a Celery app.
+        assert isinstance(app, Celery)
+
+        # Check that the expected settings have been set.
+        assert app.main == "test_name"
+        assert app.conf.broker_url == test_broker_url
+        assert app.conf.result_backend == test_result_backend
 
         # Finally, check for the generic options.
         self.verify_generic_options_in_app(app)

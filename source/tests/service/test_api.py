@@ -1091,6 +1091,55 @@ class PostEndpointTests:
             actual_result = json.loads(task.get(timeout=5, interval=0.1))
             assert actual_result == self.expected_result_jsonable
 
+    def test_task_id_returned_once_existing(self, dummy_tasks):
+        """
+        There might be a race condition where the API returns an ID for a
+        task not yet processed by a worker. Requesting the status of this
+        task will yield a 404 if requested to fast. This checks that the
+        API only returns IDs for tasks that have already a state.
+        """
+        api_kwargs = API_DEFAULT_KWARGS | dummy_tasks
+        if self.endpoint == "request":
+            InputModel = compute_request_input_model(
+                RequestArguments=DummyRequestArguments,
+                FittedParameters=DummyFittedParameters,
+            )
+        elif self.endpoint == "fit-parameters":
+            InputModel = compute_fit_parameters_input_model(
+                FitParameterArguments=DummyRequestArguments,
+                Observations=DummyObservations,
+            )
+        else:
+            raise RuntimeError("Invalid endpoint.")
+        test_api = API(**api_kwargs)
+        with APIInProcess(test_api) as base_url_root:
+            print(
+                "Test sets up Client with InputModel: "
+                f"{InputModel.model_json_schema()}"
+            )
+            client = GenericServiceClient(
+                base_url=f"{base_url_root}/",
+                endpoint=self.endpoint,
+                InputModel=InputModel,
+            )
+
+            # Raises if test API is not accessible.
+            client.check_connection()
+
+            # Check no other IDs are stored as this might make the test
+            # below pass although it might should fail.
+            assert len(client.task_ids) == 0
+
+            # This will fail (return a 500) if the API implementation of
+            # post_request does not work.
+            client.post_obj(self.valid_input_data_obj)
+
+            task_id = client.task_ids[0]
+            task = AsyncResult(str(task_id))
+
+            # Should not be pending, as this is mapped to 404.
+            assert task.state != states.PENDING
+
     def test_input_checked(self, dummy_tasks):
         """
         Verify that calling `post_request` with body data not matching the

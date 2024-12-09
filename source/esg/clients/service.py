@@ -48,6 +48,7 @@ class GenericServiceClient(HttpBaseClient):
         base_url,
         endpoint="request",
         verify=True,
+        skip_verify_warning=False,
         username=None,
         password=None,
         InputModel=None,
@@ -66,6 +67,10 @@ class GenericServiceClient(HttpBaseClient):
             Useful if self signed certificates are used but a potential
             security risk. See also the requests docs on the topic:
             https://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+        skip_verify_warning: bool
+            Allows you to mute the warning you usually get if you set `verify`
+            to `False`. In some cases, e.g. benchmarking, this is a good idea
+            to reduce noise in the logs.
         username: str
             The username to use for HTTP basic auth. Only used in combination
             with `password`.
@@ -95,6 +100,7 @@ class GenericServiceClient(HttpBaseClient):
         super().__init__(
             base_url=base_url,
             verify=verify,
+            skip_verify_warning=skip_verify_warning,
             username=username,
             password=password,
         )
@@ -199,7 +205,7 @@ class GenericServiceClient(HttpBaseClient):
                     # Nothing left to check.
                     break
 
-            if not task_ids_to_check:
+            if task_status.status_text == "ready" and not task_ids_to_check:
                 # This point will only be reached if all tasks are ready.
                 self.all_tasks_finished = True
                 return
