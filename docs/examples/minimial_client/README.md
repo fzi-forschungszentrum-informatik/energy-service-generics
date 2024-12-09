@@ -1,4 +1,4 @@
-# Example of a Minimal Service
+# Example of a Minimal Client
 
 Minimal client to fetch a PV power generation forecast from the [Basic Example Service](https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/tree/main/docs/examples/basic_example) implemented as simple shell script.
 
