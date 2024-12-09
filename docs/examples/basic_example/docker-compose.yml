@@ -35,6 +35,7 @@ services:
       - CELERY__NAME=minimal_service
       - 'CELERY__BROKER_URL=filesystem://'
       - 'CELERY__FS_TRANSPORT_BASE_FOLDER=/celery/'
+      - VERSION=test_version
 
   energy-service-generics-basic-example-worker:
     container_name: energy-service-generics-basic-example-worker

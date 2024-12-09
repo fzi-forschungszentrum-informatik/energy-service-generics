@@ -19,34 +19,35 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
+import json
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from functools import reduce
-import json
-import logging
-from unittest.mock import patch, MagicMock
-from uuid import UUID
 from time import sleep
 from typing import Optional
+from unittest.mock import MagicMock, patch
+from uuid import UUID
 
-from fastapi import FastAPI
 import jwt
+import pydantic
 import pytest
 import requests
-
-from esg.test.jwt_utils import RSA256_KEY
-from esg.test.jwt_utils import RSA256_PRIVATE_KEY
-from esg.test.jwt_utils import INVALID_RSA_PRIVATE_KEY
+from esg.test.jwt_utils import (
+    INVALID_RSA_PRIVATE_KEY,
+    RSA256_KEY,
+    RSA256_PRIVATE_KEY,
+)
 from esg.test.tools import APIInProcess
+from fastapi import FastAPI
 
 # To prevent tests from failing if only parts of the package are used.
 try:
-    from celery import current_task
-    from celery import states
+    import uvicorn
+    from celery import current_task, states
     from celery.exceptions import Ignore
     from celery.result import AsyncResult
     from prometheus_fastapi_instrumentator import Instrumentator
-    import uvicorn
 
     service_extra_not_installed = False
 except ModuleNotFoundError:
@@ -62,12 +63,16 @@ except ModuleNotFoundError:
 from esg.clients.service import GenericServiceClient
 from esg.models.base import _BaseModel
 from esg.service.api import API
-from esg.service.exceptions import GenericUnexpectedException
-from esg.service.exceptions import RequestInducedException
-from esg.service.worker import compute_fit_parameters_input_model
-from esg.service.worker import compute_request_input_model
-from esg.service.worker import invoke_handle_request
-from esg.service.worker import invoke_fit_parameters
+from esg.service.exceptions import (
+    GenericUnexpectedException,
+    RequestInducedException,
+)
+from esg.service.worker import (
+    compute_fit_parameters_input_model,
+    compute_request_input_model,
+    invoke_fit_parameters,
+    invoke_handle_request,
+)
 
 
 def deep_get(dictionary, *keys):
@@ -1156,7 +1161,8 @@ class PostEndpointTests:
         assert response.status_code == 422
 
         actual_error_body = response.json()
-        print(actual_error_body)
+        print(f"actual_error_body: {actual_error_body}")
+        print(f"expected_error_jsonable: {self.expected_error_jsonable}")
         assert actual_error_body == self.expected_error_jsonable
 
 
@@ -1188,14 +1194,20 @@ class TestPostRequest(PostEndpointTests):
                 "loc": ["arguments", "argument_as_float"],
                 "msg": "Field required",
                 "input": {"noFieldInModel": "foo bar"},
-                "url": "https://errors.pydantic.dev/2.10/v/missing",
+                "url": (
+                    "https://errors.pydantic.dev/"
+                    f"{'.'.join(pydantic.__version__.split('.')[:2])}/v/missing"
+                ),
             },
             {
                 "type": "missing",
                 "loc": ["parameters"],
                 "msg": "Field required",
                 "input": {"arguments": {"noFieldInModel": "foo bar"}},
-                "url": "https://errors.pydantic.dev/2.10/v/missing",
+                "url": (
+                    "https://errors.pydantic.dev/"
+                    f"{'.'.join(pydantic.__version__.split('.')[:2])}/v/missing"
+                ),
             },
         ]
     }
@@ -1228,14 +1240,20 @@ class TestPostFitParameters(PostEndpointTests):
                 "loc": ["arguments", "argument_as_float"],
                 "msg": "Field required",
                 "input": {"noFieldInModel": "foo bar"},
-                "url": "https://errors.pydantic.dev/2.10/v/missing",
+                "url": (
+                    "https://errors.pydantic.dev/"
+                    f"{'.'.join(pydantic.__version__.split('.')[:2])}/v/missing"
+                ),
             },
             {
                 "type": "missing",
                 "loc": ["observations"],
                 "msg": "Field required",
                 "input": {"arguments": {"noFieldInModel": "foo bar"}},
-                "url": "https://errors.pydantic.dev/2.10/v/missing",
+                "url": (
+                    "https://errors.pydantic.dev/"
+                    f"{'.'.join(pydantic.__version__.split('.')[:2])}/v/missing"
+                ),
             },
         ]
     }
