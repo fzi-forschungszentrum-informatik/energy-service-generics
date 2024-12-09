@@ -46,7 +46,7 @@ setup(
     extras_require={
         "service": [
             "uvicorn==0.*",
-            "celery[pytest]",
+            "celery[pytest,redis]",
             "prometheus-fastapi-instrumentator==6.*",
         ],
         "pandas": [

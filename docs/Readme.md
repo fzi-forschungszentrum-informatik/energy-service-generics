@@ -1,6 +1,6 @@
-# BEMCom Documentation
+# Energy Service Generics Documentation
 
-This folder contains all that is necessary to build the HTML documentation of BEMCom.
+This folder contains all that is necessary to build the HTML documentation of the ESG framework.
 
 
 
