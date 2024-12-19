@@ -1,6 +1,6 @@
 # Scalability Example Service
 
-This is an example service that can be used to investigate and/or optimize the scalability of the service infrastructure. In particular, for configuring and testing of the message broker.
+This is an example service that can be used to investigate and/or optimize the scalability of the service infrastructure. In particular, for configuring and testing of the message broker. This service has been tested and worked well with Redis as broker and results backend.
 
 ## Running the Service 
 
@@ -26,6 +26,14 @@ docker compose down
 ```
 
 to remove the containers.
+
+## Running the Client
+
+Simply use the corresponding docker compose file. Adjust the value of the `SCALABILITY_DEMO_SERVICE_BASE_URL` environment variable if the service is not executed on the same machine as the client.
+
+```
+docker compose -f docker-compose-client.yml up
+```
 
 ## Running the Tests / Working on the Service Code
 

@@ -1,0 +1,9 @@
+FROM energy-service-generics:latest
+
+ENV PYTHONUNBUFFERED=1
+
+COPY ./client/ /source/client/
+
+WORKDIR /source/client/
+ENTRYPOINT [ "python" ]
+CMD [ "main.py" ]

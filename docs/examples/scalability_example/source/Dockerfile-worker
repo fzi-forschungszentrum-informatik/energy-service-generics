@@ -1,0 +1,9 @@
+FROM energy-service-generics:latest-service
+
+RUN pip install celery[gevent]
+
+COPY ./service/ /source/service/
+
+WORKDIR /source/service/
+ENTRYPOINT [ "celery" ]
+CMD [ "--app", "worker", "worker", "-P", "gevent", "-c", "1000", "--loglevel=INFO" ]
