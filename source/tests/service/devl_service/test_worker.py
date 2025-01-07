@@ -1,5 +1,5 @@
 """
-Tests for `api.py`
+Tests for `worker.py`
 
 Copyright 2024 FZI Research Center for Information Technology
 
@@ -19,49 +19,22 @@ SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
 """
 
-from esg.service.worker import compute_request_input_model
-from esg.service.worker import compute_fit_parameters_input_model
-from esg.test.generic_tests import GenericAPITest
+from esg.test.generic_tests import GenericWorkerTaskTest
 
-from api import api as tested_api
-from data_model import RequestArguments
-from data_model import FittedParameters
-from data_model import RequestOutput
-from data_model import FitParameterArguments
-from data_model import Observations
-from worker import app
+from esg.service.devl_service.worker import fit_parameters_task, request_task
 from .data import REQUEST_INPUTS_FOOC_TEST
 from .data import REQUEST_OUTPUTS_FOOC_TEST
 from .data import FIT_PARAM_INPUTS_FOOC_TEST
 from .data import FIT_PARAM_OUTPUTS_FOOC_TEST
 
-RequestInput = compute_request_input_model(
-    RequestArguments=RequestArguments,
-    FittedParameters=FittedParameters,
-)
 
-
-class TestRequestEndpoint(GenericAPITest):
-    tested_api = tested_api
-    celery_app = app
-    endpoint = "request"
-    InputDataModel = RequestInput
-    OutputDataModel = RequestOutput
+class TestRequestTask(GenericWorkerTaskTest):
+    task_to_test = request_task
     input_data_jsonable = [m["JSONable"] for m in REQUEST_INPUTS_FOOC_TEST]
     output_data_jsonable = [m["JSONable"] for m in REQUEST_OUTPUTS_FOOC_TEST]
 
 
-FitParametersInput = compute_fit_parameters_input_model(
-    FitParameterArguments=FitParameterArguments,
-    Observations=Observations,
-)
-
-
-class TestFitParametersEndpoint(GenericAPITest):
-    tested_api = tested_api
-    celery_app = app
-    endpoint = "fit-parameters"
-    InputDataModel = FitParametersInput
-    OutputDataModel = FittedParameters
+class TestFitParametersTask(GenericWorkerTaskTest):
+    task_to_test = fit_parameters_task
     input_data_jsonable = [m["JSONable"] for m in FIT_PARAM_INPUTS_FOOC_TEST]
     output_data_jsonable = [m["JSONable"] for m in FIT_PARAM_OUTPUTS_FOOC_TEST]

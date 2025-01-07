@@ -15,23 +15,23 @@ limitations under the License.
 
 SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
-"""
 
-from packaging.version import Version
+NOTE: Need to change something here? Check if the examples services need to
+      be adjusted too!
+"""
 
 from esg.service.api import API
 
-from data_model import RequestArguments, RequestOutput
-from data_model import FittedParameters, Observations
-from data_model import FitParameterArguments
-from worker import request_task, fit_parameters_task
+from .data_model import RequestArguments, RequestOutput
+from .data_model import FittedParameters, Observations
+from .data_model import FitParameterArguments
+from .worker import request_task, fit_parameters_task
 
 api = API(
     RequestArguments=RequestArguments,
     RequestOutput=RequestOutput,
     request_task=request_task,
     title="Minimal Viable Service",
-    version=Version("0.0.1"),
     FitParameterArguments=FitParameterArguments,
     FittedParameters=FittedParameters,
     Observations=Observations,

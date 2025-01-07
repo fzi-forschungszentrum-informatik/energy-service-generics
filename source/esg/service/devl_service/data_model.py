@@ -15,6 +15,9 @@ limitations under the License.
 
 SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
+
+NOTE: Need to change something here? Check if the examples services need to
+      be adjusted too!
 """
 
 from typing import List

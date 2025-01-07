@@ -26,12 +26,12 @@ from esg.service.worker import compute_request_input_model
 from esg.service.worker import compute_fit_parameters_input_model
 from esg.test.generic_tests import GenericFOOCTest
 
-from data_model import RequestArguments
-from data_model import FittedParameters
-from data_model import RequestOutput
-from data_model import FitParameterArguments
-from data_model import Observations
-from fooc import handle_request, fit_parameters
+from esg.service.devl_service.data_model import RequestArguments
+from esg.service.devl_service.data_model import FittedParameters
+from esg.service.devl_service.data_model import RequestOutput
+from esg.service.devl_service.data_model import FitParameterArguments
+from esg.service.devl_service.data_model import Observations
+from esg.service.devl_service.fooc import handle_request, fit_parameters
 from .data import REQUEST_INPUTS_FOOC_TEST
 from .data import REQUEST_OUTPUTS_FOOC_TEST
 from .data import FIT_PARAM_INPUTS_FOOC_TEST

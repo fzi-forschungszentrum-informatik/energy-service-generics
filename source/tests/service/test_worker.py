@@ -70,7 +70,7 @@ class TestCeleryAppFromEnviron:
         Celery must have a name to prevent clashes if several services use the
         same transport.
         """
-        with patch.dict(os.environ, {}):
+        with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError) as exc_info:
                 celery_app_from_environ()
 
@@ -85,7 +85,7 @@ class TestCeleryAppFromEnviron:
             "CELERY__NAME": "test",
             "CELERY__BROKER_URL": "filesystem://",
         }
-        with patch.dict(os.environ, test_environ):
+        with patch.dict(os.environ, test_environ, clear=True):
             with pytest.raises(ValueError) as exc_info:
                 celery_app_from_environ()
             assert "CELERY__FS_TRANSPORT_BASE_FOLDER" in str(exc_info.value)
@@ -98,7 +98,7 @@ class TestCeleryAppFromEnviron:
         test_environ = {
             "CELERY__NAME": "test",
         }
-        with patch.dict(os.environ, test_environ):
+        with patch.dict(os.environ, test_environ, clear=True):
             with pytest.raises(ValueError) as exc_info:
                 celery_app_from_environ()
             assert "CELERY__BROKER_URL" in str(exc_info.value)
@@ -112,7 +112,7 @@ class TestCeleryAppFromEnviron:
             "CELERY__NAME": "test",
             "CELERY__BROKER_URL": "definitely not supported",
         }
-        with patch.dict(os.environ, test_environ):
+        with patch.dict(os.environ, test_environ, clear=True):
             with pytest.raises(ValueError) as exc_info:
                 celery_app_from_environ()
             assert "CELERY__BROKER_URL" in str(exc_info.value)
@@ -145,7 +145,7 @@ class TestCeleryAppFromEnviron:
                 "CELERY__BROKER_URL": "filesystem://",
                 "CELERY__FS_TRANSPORT_BASE_FOLDER": tmp_dir,
             }
-            with patch.dict(os.environ, test_environ):
+            with patch.dict(os.environ, test_environ, clear=True):
                 app = celery_app_from_environ()
 
             # Check that the folders have been created.
@@ -177,7 +177,7 @@ class TestCeleryAppFromEnviron:
             "CELERY__NAME": "test_name",
             "CELERY__BROKER_URL": test_broker_url,
         }
-        with patch.dict(os.environ, test_environ):
+        with patch.dict(os.environ, test_environ, clear=True):
             app = celery_app_from_environ()
 
         # Check that we have received a Celery app.
@@ -203,7 +203,7 @@ class TestCeleryAppFromEnviron:
             "CELERY__BROKER_URL": test_broker_url,
             "CELERY__RESULT_BACKEND": test_result_backend,
         }
-        with patch.dict(os.environ, test_environ):
+        with patch.dict(os.environ, test_environ, clear=True):
             app = celery_app_from_environ()
 
         # Check that we have received a Celery app.

@@ -17,16 +17,19 @@ limitations under the License.
 
 SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 SPDX-License-Identifier: Apache-2.0
+
+NOTE: Need to change something here? Check if the examples services need to
+      be adjusted too!
 """
 
 from esg.service.worker import celery_app_from_environ
 from esg.service.worker import invoke_fit_parameters
 from esg.service.worker import invoke_handle_request
 
-from data_model import RequestArguments, RequestOutput
-from data_model import FittedParameters, Observations
-from data_model import FitParameterArguments
-from fooc import fit_parameters, handle_request
+from .data_model import RequestArguments, RequestOutput
+from .data_model import FittedParameters, Observations
+from .data_model import FitParameterArguments
+from .fooc import fit_parameters, handle_request
 
 app = celery_app_from_environ()
 

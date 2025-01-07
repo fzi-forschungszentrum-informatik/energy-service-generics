@@ -1,6 +1,6 @@
 # Copyright 2024 FZI Research Center for Information Technology
 #
-# Licensed under the Apache License, Version 2.0 (the "License")#
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -15,8 +15,19 @@
 # SPDX-FileCopyrightText: 2024 FZI Research Center for Information Technology
 # SPDX-License-Identifier: Apache-2.0
 
-[pytest]
-
-filterwarnings =
-    # This warning is emitted by esg.test and is pointless but cannot be disabled there.
-    ignore:.+esg\.test.*:pytest.PytestAssertRewriteWarning
+services:
+  energy-service-generics-devl-autotest:
+    container_name: energy-service-generics-devl-autotest
+    build:
+      context: ./source
+    init: true # Faster shutdown.
+    entrypoint: [ "auto-pytest" ]
+    command: [ "energy_service_generics/tests/" ]
+    tty: true # Colorize output.
+    restart: unless-stopped
+    volumes:
+      - ./source:/source/energy_service_generics/
+      - ./source/esg:/usr/local/lib/python3.11/site-packages/esg
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    environment:
+      - VERSION=latest-devl

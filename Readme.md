@@ -8,7 +8,7 @@ Energy Management Systems (EMSs), in a sense of software computing optimized ope
 
 For further information about the framework please consult the [corresponding paper available here](https://arxiv.org/abs/2402.15230). The latter provides further details about motivation and necessity of web-services for EMS applications, an extensive discussion of the technical design underlying the Energy Service Generics framework as well documentation of other relevant  aspects.
 
-## Installation
+## Usage
 
 After checking out or downloading the source code install the package with:
 
@@ -53,25 +53,21 @@ Please consider citing us if this software and/or the accompanying [paper](https
 
 ## Development Instructions
 
-Recommend way of working on the code is to automatically run the tests in the container. The provided `docker-compose.yml` file is configured accordingly. In order to start the interactive sessions just execute:
+The recommend way of working on the code is to run it in a docker container.
+
+This repo employs a [test-driven development](https://en.wikipedia.org/wiki/Test-driven_development) schema in combination with a script that automatically runs the tests on file changes. In order to start the container execute:
 
 ```bash
-docker compose up -d --build && docker compose logs -f --no-log-prefix
+docker compose -f docker-compose-autotest.yml up --no-log-prefix
 ```
 
-This will execute pytest every time a python file has changed. Furthermore it will spin up a minimal instance  viable service at http://localhost:8800/. You can use the latter to interactively evaluate your code changes, e.g. if working on settings that influence the interactive documentation (SwaggerUI).
-
-One you are finished get rid of the containers with:
+Furthermore, a functional service is included for interactive testing. You can use the latter to evaluate your code changes, e.g. if working on settings that influence the interactive documentation (SwaggerUI). The following code will start the service:
 
 ```bash
-docker compose down
+docker compose -f docker-compose-interactive-test.yml up
 ```
 
-A shortcut (without building) for executing just the tests is:
-
-```bash
-docker compose up --no-log-prefix energy-service-generics-devl-autotest
-```
+You can access the interactive API documentation on http://localhost:8800/.
 
 ## Contact
 

@@ -23,11 +23,11 @@ from esg.service.worker import compute_request_input_model
 from esg.service.worker import compute_fit_parameters_input_model
 from esg.test.generic_tests import GenericMessageSerializationTest
 
-from data_model import RequestArguments
-from data_model import FittedParameters
-from data_model import RequestOutput
-from data_model import FitParameterArguments
-from data_model import Observations
+from esg.service.devl_service.data_model import RequestArguments
+from esg.service.devl_service.data_model import FittedParameters
+from esg.service.devl_service.data_model import RequestOutput
+from esg.service.devl_service.data_model import FitParameterArguments
+from esg.service.devl_service.data_model import Observations
 from .data import REQUEST_INPUTS_MODEL_TEST
 from .data import REQUEST_OUTPUTS_MODEL_TEST
 from .data import INVALID_REQUEST_INPUTS

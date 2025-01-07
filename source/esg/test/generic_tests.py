@@ -34,6 +34,9 @@ class GenericMessageSerializationTest:
     A generic set of tests to verify that the data can be serialized between
     the expected representations.
 
+    NOTE: This class is used in `tests/models/*.py`.
+          Check if the tests there work as expected if working on this code.
+
     Attributes:
     -----------
     ModelClass : pydantic model class
@@ -136,6 +139,9 @@ class GenericMessageSerializationTestBEMcom(GenericMessageSerializationTest):
     Extends `GenericMessageSerializationTest` with tests about serialization
     from and to BEMCom message format.
 
+    NOTE: This class is used in `tests/models/*.py`.
+          Check if the tests there work as expected if working on this code.
+
     Attributes:
     -----------
     ModelClass : pydantic model class
@@ -220,6 +226,9 @@ class GenericWorkerTaskTest(TestClassWithFixtures):
     """
     Tests for checking that the worker tasks are correctly implemented.
 
+    NOTE: This class is used in `tests/service/devl_service/test_worker.py`.
+          Check if the tests there work as expected if working on this code.
+
     Attributes:
     -----------
     fixture_names : list of str
@@ -292,6 +301,9 @@ class GenericFOOCTest(TestClassWithFixtures):
           want to add more sophisticated tests for your forecasting or
           optimization code.
 
+    NOTE: This class is used in `tests/service/devl_service/test_fooc.py`.
+          Check if the tests there work as expected if working on this code.
+
     Attributes:
     -----------
     fixture_names : list of str
@@ -362,6 +374,8 @@ class GenericAPITest:
     This basically just verifies that the models are wired up correctly as
     validating the tasks too would require a full integration with the worker.
 
+    NOTE: This class is used in `tests/service/devl_service/test_api.py`.
+          Check if the tests there work as expected if working on this code.
 
     Attributes:
     -----------
