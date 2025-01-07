@@ -597,6 +597,9 @@ class API:
         status instead. See e.g. here:
         https://celery.school/custom-celery-task-states
 
+        NOTE: This code, as well as its integration, is tested in
+              `PostEndpointTests.test_task_id_returned_once_existing`.
+
         Arguments:
         ----------
         task : Task instance
@@ -607,7 +610,6 @@ class API:
         GenericUnexpectedException:
             I.e. a 500 if the task has not been picked up by a worker in 30s.
         """
-
         retry = 1
         max_retries = 300
         while True:

@@ -401,6 +401,19 @@ class GenericAPITest:
         if self.endpoint not in ["request", "fit-parameters"]:
             raise RuntimeError("Invalid endpoint.")
 
+    def setup_class(cls):
+        """
+        Prevents that API tests block for ca. 30 seconds per test as the
+        `wait_for_task_id_available` method waits for a confirmation that
+        tasks have been picked up by a worker. However, the latter will never
+        happen if the API is tested without the actual worker running.
+        """
+
+        async def wait_for_task_mock(*args, **kwargs):
+            return
+
+        cls.tested_api.wait_for_task_id_available = wait_for_task_mock
+
     def test_input_models_correct(self):
         """
         Verify that the configured input data model is able to process
@@ -490,6 +503,9 @@ class GenericEndToEndServiceTests:
             * This should get a URL of the service which must be online already.
             * You need to handle authentication.
             * Add handling of fit parameters by defining which endpoint is used.
+            * You might even be able to automatically import the data models,
+              which would this test make work out of the box from inside the
+              container of a service.
             * The main idea is that this tests checks weather the service
               works. It should issue a valid request, check the status (we
               might introduce a time limit here), and finally fetches the
