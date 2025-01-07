@@ -16,9 +16,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 volumes:
-  energy-service-generics-devl-service-celery-broker:
-  energy-service-generics-devl-service-celery-results:
-
+  energy-service-generics-devl-service-transport:
+    name: energy-service-generics-devl-service-transport
 
 services:
   energy-service-generics-devl-service-api:
@@ -34,8 +33,7 @@ services:
       - 8800:8800
     volumes:
       - ./source/esg:/usr/local/lib/python3.11/site-packages/esg
-      - energy-service-generics-devl-service-celery-broker:/celery/broker/
-      - energy-service-generics-devl-service-celery-results:/celery/results/
+      - energy-service-generics-devl-service-transport:/celery/
     environment:
       - CELERY__NAME=devl_service
       - 'CELERY__BROKER_URL=filesystem://'
@@ -53,8 +51,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./source/esg:/usr/local/lib/python3.11/site-packages/esg
-      - energy-service-generics-devl-service-celery-broker:/celery/broker/
-      - energy-service-generics-devl-service-celery-results:/celery/results/
+      - energy-service-generics-devl-service-transport:/celery/
     environment:
       - CELERY__NAME=devl_service
       - 'CELERY__BROKER_URL=filesystem://'
