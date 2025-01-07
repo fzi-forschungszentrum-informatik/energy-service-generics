@@ -22,7 +22,11 @@ NOTE: Need to change something here? Check if the examples services need to
       be adjusted too!
 """
 
-import numpy as np
+try:
+    import numpy as np
+
+except ModuleNotFoundError:
+    np = None
 
 
 def handle_request(input_data):

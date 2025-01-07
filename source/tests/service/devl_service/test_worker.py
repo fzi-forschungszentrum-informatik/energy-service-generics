@@ -20,20 +20,35 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 from esg.test.generic_tests import GenericWorkerTaskTest
+import pytest
 
-from esg.service.devl_service.worker import fit_parameters_task, request_task
+from esg.service.devl_service.fooc import np
+
+try:
+    from esg.service.devl_service.worker import app
+    from esg.service.devl_service.worker import fit_parameters_task
+    from esg.service.devl_service.worker import request_task
+except TypeError:
+    app = None
+    fit_parameters_task = None
+    request_task = None
+
 from .data import REQUEST_INPUTS_FOOC_TEST
 from .data import REQUEST_OUTPUTS_FOOC_TEST
 from .data import FIT_PARAM_INPUTS_FOOC_TEST
 from .data import FIT_PARAM_OUTPUTS_FOOC_TEST
 
 
+@pytest.mark.skipif(np is None, reason="requires numpy")
+@pytest.mark.skipif(app is None, reason="requires Celery")
 class TestRequestTask(GenericWorkerTaskTest):
     task_to_test = request_task
     input_data_jsonable = [m["JSONable"] for m in REQUEST_INPUTS_FOOC_TEST]
     output_data_jsonable = [m["JSONable"] for m in REQUEST_OUTPUTS_FOOC_TEST]
 
 
+@pytest.mark.skipif(np is None, reason="requires numpy")
+@pytest.mark.skipif(app is None, reason="requires Celery")
 class TestFitParametersTask(GenericWorkerTaskTest):
     task_to_test = fit_parameters_task
     input_data_jsonable = [m["JSONable"] for m in FIT_PARAM_INPUTS_FOOC_TEST]

@@ -25,3 +25,6 @@ import os
 os.environ["CELERY__NAME"] = "test_name"
 os.environ["CELERY__BROKER_URL"] = "filesystem://"
 os.environ["CELERY__FS_TRANSPORT_BASE_FOLDER"] = "/tmp/"
+
+# Service needs a version for running the API tests too.
+os.environ["VERSION"] = "latest-testing"

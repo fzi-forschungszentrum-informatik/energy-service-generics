@@ -25,6 +25,7 @@ SPDX-License-Identifier: Apache-2.0
 from esg.service.worker import compute_request_input_model
 from esg.service.worker import compute_fit_parameters_input_model
 from esg.test.generic_tests import GenericFOOCTest
+import pytest
 
 from esg.service.devl_service.data_model import RequestArguments
 from esg.service.devl_service.data_model import FittedParameters
@@ -32,6 +33,7 @@ from esg.service.devl_service.data_model import RequestOutput
 from esg.service.devl_service.data_model import FitParameterArguments
 from esg.service.devl_service.data_model import Observations
 from esg.service.devl_service.fooc import handle_request, fit_parameters
+from esg.service.devl_service.fooc import np
 from .data import REQUEST_INPUTS_FOOC_TEST
 from .data import REQUEST_OUTPUTS_FOOC_TEST
 from .data import FIT_PARAM_INPUTS_FOOC_TEST
@@ -43,6 +45,7 @@ RequestInput = compute_request_input_model(
 )
 
 
+@pytest.mark.skipif(np is None, reason="requires numpy")
 class TestHandleRequest(GenericFOOCTest):
     InputDataModel = RequestInput
     OutputDataModel = RequestOutput
@@ -59,6 +62,7 @@ FitParametersInput = compute_fit_parameters_input_model(
 )
 
 
+@pytest.mark.skipif(np is None, reason="requires numpy")
 class TestFitParameters(GenericFOOCTest):
     InputDataModel = FitParametersInput
     OutputDataModel = FittedParameters

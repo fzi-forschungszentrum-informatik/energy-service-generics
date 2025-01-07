@@ -22,14 +22,21 @@ SPDX-License-Identifier: Apache-2.0
 from esg.service.worker import compute_request_input_model
 from esg.service.worker import compute_fit_parameters_input_model
 from esg.test.generic_tests import GenericAPITest
+import pytest
 
-from esg.service.devl_service.api import api as tested_api
 from esg.service.devl_service.data_model import RequestArguments
 from esg.service.devl_service.data_model import FittedParameters
 from esg.service.devl_service.data_model import RequestOutput
 from esg.service.devl_service.data_model import FitParameterArguments
 from esg.service.devl_service.data_model import Observations
-from esg.service.devl_service.worker import app
+
+try:
+    from esg.service.devl_service.worker import app
+    from esg.service.devl_service.api import api as tested_api
+except TypeError:
+    app = None
+    tested_api = None
+
 from .data import REQUEST_INPUTS_FOOC_TEST
 from .data import REQUEST_OUTPUTS_FOOC_TEST
 from .data import FIT_PARAM_INPUTS_FOOC_TEST
@@ -41,6 +48,7 @@ RequestInput = compute_request_input_model(
 )
 
 
+@pytest.mark.skipif(app is None, reason="requires Celery")
 class TestRequestEndpoint(GenericAPITest):
     tested_api = tested_api
     celery_app = app
@@ -57,6 +65,7 @@ FitParametersInput = compute_fit_parameters_input_model(
 )
 
 
+@pytest.mark.skipif(app is None, reason="requires Celery")
 class TestFitParametersEndpoint(GenericAPITest):
     tested_api = tested_api
     celery_app = app
