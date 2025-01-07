@@ -30,6 +30,4 @@ services:
       - ./source/service:/source/service/
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     environment:
-      - CELERY__NAME=minimal_service
-      - 'CELERY__BROKER_URL=filesystem://'
-      - 'CELERY__FS_TRANSPORT_BASE_FOLDER=/tmp/'
+      - VERSION=latest-devl

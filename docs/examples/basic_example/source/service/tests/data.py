@@ -168,9 +168,8 @@ REQUEST_INPUTS_MODEL_TEST = [
         "Python": {
             "arguments": {
                 "geographic_position": {
-                    "latitude": 35.2,
-                    "longitude": -110.0,
-                    "height": None,
+                    "latitude": 49.013,
+                    "longitude": 8.404,
                 }
             },
             "parameters": {
@@ -178,7 +177,6 @@ REQUEST_INPUTS_MODEL_TEST = [
                     "azimuth_angle": 20,
                     "inclination_angle": 30,
                     "nominal_power": 5.0,
-                    "power_datapoint_id": 1,
                 }
             },
         },
@@ -187,9 +185,8 @@ REQUEST_INPUTS_MODEL_TEST = [
         "JSONable": {
             "arguments": {
                 "geographic_position": {
-                    "latitude": 35.2,
-                    "longitude": -110.0,
-                    "height": None,
+                    "latitude": 49.013,
+                    "longitude": 8.404,
                 }
             },
             "parameters": {
@@ -197,7 +194,6 @@ REQUEST_INPUTS_MODEL_TEST = [
                     "azimuth_angle": 20,
                     "inclination_angle": 30,
                     "nominal_power": 5.0,
-                    "power_datapoint_id": 1,
                 }
             },
         },
@@ -434,7 +430,6 @@ FIT_PARAM_OUTPUTS_FOOC_TEST = [
                 "azimuth_angle": 15.0,
                 "inclination_angle": 25.0,
                 "nominal_power": 4.5,
-                "power_datapoint_id": None,
             }
         },
         # NOTE: No difference to Python as no data types included that JSON
@@ -444,7 +439,6 @@ FIT_PARAM_OUTPUTS_FOOC_TEST = [
                 "azimuth_angle": 15.0,
                 "inclination_angle": 25.0,
                 "nominal_power": 4.5,
-                "power_datapoint_id": None,
             }
         },
     }
@@ -459,7 +453,6 @@ FIT_PARAM_INPUTS_MODEL_TEST = [
                 "geographic_position": {
                     "latitude": 35.2,
                     "longitude": -110.0,
-                    "height": None,
                 }
             },
             "observations": {
@@ -480,7 +473,6 @@ FIT_PARAM_INPUTS_MODEL_TEST = [
                 "geographic_position": {
                     "latitude": 35.2,
                     "longitude": -110.0,
-                    "height": None,
                 }
             },
             "observations": {
