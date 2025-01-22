@@ -29,6 +29,7 @@ from typing import Optional
 
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import model_validator
 
 from esg.models.base import _BaseModel
 
@@ -234,6 +235,13 @@ class Coverage(_BaseModel):
             "training data for ML applications."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_from_time_lte_to_time(cls, data):
+        error_message = "`from_time` must be larger or equal `to_time`."
+        if data.from_time > data.to_time:
+            raise ValueError(error_message)
+        return data
 
 
 class CoverageDelta(_BaseModel):

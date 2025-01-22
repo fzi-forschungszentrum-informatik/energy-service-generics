@@ -1596,6 +1596,14 @@ invalid_coverages = [
             "coverage_to": None,
         },
     },
+    {
+        # `to_time` must be larger then `from_time`.
+        "JSONable": {
+            "from_time": "2022-05-03T00:00:00Z",
+            "to_time": "2022-05-02T00:00:00Z",
+            "available_at": None,
+        },
+    },
 ]
 
 
