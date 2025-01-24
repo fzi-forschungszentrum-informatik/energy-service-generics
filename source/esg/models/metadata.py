@@ -28,6 +28,7 @@ from typing import List
 from typing import Optional
 
 from pydantic import Field
+from pydantic import field_validator
 from pydantic import HttpUrl
 from pydantic import model_validator
 
@@ -235,6 +236,18 @@ class Coverage(_BaseModel):
             "training data for ML applications."
         ),
     )
+
+    @field_validator("from_time")
+    def validate_from_time_has_timezone(cls, v):
+        if v.tzinfo is None:
+            raise ValueError("`from_time` must have timezone specified.")
+        return v
+
+    @field_validator("to_time")
+    def validate_to_time_has_timezone(cls, v):
+        if v.tzinfo is None:
+            raise ValueError("`to_time` must have timezone specified.")
+        return v
 
     @model_validator(mode="after")
     def validate_from_time_lte_to_time(cls, data):

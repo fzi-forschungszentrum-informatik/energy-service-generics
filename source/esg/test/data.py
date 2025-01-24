@@ -1544,8 +1544,8 @@ invalid_services = [
 ]
 
 coverages = [
+    # Minimal valid example of a simple 24h coverage.
     {
-        # Minimal valid example of a simple 24h coverage.
         "Python": {
             "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
             "to_time": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
@@ -1556,8 +1556,8 @@ coverages = [
             "available_at": None,
         },
     },
+    # With available at set.
     {
-        # With available at set..
         "Python": {
             "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
             "to_time": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
@@ -1567,6 +1567,18 @@ coverages = [
             "from_time": "2022-05-01T00:00:00Z",
             "to_time": "2022-05-02T00:00:00Z",
             "available_at": "2022-05-01T00:00:00Z",
+        },
+    },
+    # from_time and to_time can be identical.
+    {
+        "Python": {
+            "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
+            "to_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
+        },
+        "JSONable": {
+            "from_time": "2022-05-01T00:00:00Z",
+            "to_time": "2022-05-01T00:00:00Z",
+            "available_at": None,
         },
     },
 ]
@@ -1596,12 +1608,25 @@ invalid_coverages = [
             "coverage_to": None,
         },
     },
+    # `to_time` must be larger then `from_time`.
     {
-        # `to_time` must be larger then `from_time`.
         "JSONable": {
             "from_time": "2022-05-03T00:00:00Z",
             "to_time": "2022-05-02T00:00:00Z",
-            "available_at": None,
+        },
+    },
+    # `from_time` must have timezone.
+    {
+        "JSONable": {
+            "from_time": "2022-05-03T00:00:00",
+            "to_time": "2022-05-02T00:00:00Z",
+        },
+    },
+    # `to_time` must have timezone.
+    {
+        "JSONable": {
+            "from_time": "2022-05-03T00:00:00Z",
+            "to_time": "2022-05-02T00:00:00",
         },
     },
 ]
