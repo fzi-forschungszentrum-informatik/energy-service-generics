@@ -1549,18 +1549,6 @@ coverages = [
         "Python": {
             "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
             "to_time": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
-        },
-        "JSONable": {
-            "from_time": "2022-05-01T00:00:00Z",
-            "to_time": "2022-05-02T00:00:00Z",
-            "available_at": None,
-        },
-    },
-    # With available at set.
-    {
-        "Python": {
-            "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
-            "to_time": datetime(2022, 5, 2, 0, tzinfo=timezone.utc),
             "available_at": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
         },
         "JSONable": {
@@ -1574,11 +1562,12 @@ coverages = [
         "Python": {
             "from_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
             "to_time": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
+            "available_at": datetime(2022, 5, 1, 0, tzinfo=timezone.utc),
         },
         "JSONable": {
             "from_time": "2022-05-01T00:00:00Z",
             "to_time": "2022-05-01T00:00:00Z",
-            "available_at": None,
+            "available_at": "2022-05-01T00:00:00Z",
         },
     },
 ]

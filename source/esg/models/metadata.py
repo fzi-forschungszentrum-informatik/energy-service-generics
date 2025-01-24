@@ -229,7 +229,7 @@ class Coverage(_BaseModel):
         ),
     )
     available_at: Optional[datetime] = Field(
-        default=None,
+        default=datetime.now(tz=timezone.utc),
         description=(
             "If set will make the service use only information available "
             "before this date and time. This is relevant for generating "
