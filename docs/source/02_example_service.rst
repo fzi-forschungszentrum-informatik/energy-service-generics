@@ -1,6 +1,6 @@
 Example service implementation
 ==============================
-This section demonstrates a simple but fully functional implementation of a photovoltaic (PV) power gerneration forecast service. For more in-depth information about the individual components, please refer to the :doc:`01_concepts` section or the published `research article <https://de.overleaf.com/project/6565c3491f8923df81a997ac>`__.
+This section demonstrates a simple but fully functional implementation of a photovoltaic (PV) power gerneration forecast service. For more in-depth information about the individual components, please refer to the :doc:`01_concepts` section or the published `research article <https://doi.org/10.48550/arXiv.2402.15230>`__.
 
 1. Preparation of the forecast or optimization code
 ---------------------------------------------------
@@ -66,7 +66,7 @@ parameters by invoking the forecasting or optimization code, as well as task sch
 .. literalinclude:: ../examples/basic_example/source/service/worker.py
    :pyobject: fit_parameters_task
 
-The above code can be found in the `api.py <https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/blob/main/docs/examples/basic_example/source/service/worker.py>`__ file.
+The above code can be found in the `worker.py <https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/blob/main/docs/examples/basic_example/source/service/worker.py>`__ file.
 
 4. Customization of the API component
 -------------------------------------
@@ -76,7 +76,7 @@ The implementation of the API component is available ready-to-use in the ESG fra
    :language: python
    :start-at: api =
 
-The above code can be found in the `worker.py <https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/blob/main/docs/examples/basic_example/source/service/api.py>`__ file.
+The above code can be found in the `api.py <https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/blob/main/docs/examples/basic_example/source/service/api.py>`__ file.
 
 5. Building docker images to derive functional services
 -------------------------------------------------------

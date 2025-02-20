@@ -1,7 +1,7 @@
 Concepts
 ========
 
-This section explains how to apply the ESG framework and gives an overview of the basic technical concepts.  For more in-depth information especially regarding the discussion of the approach, please refer to the published `research article <https://de.overleaf.com/project/6565c3491f8923df81a997ac>`__.
+This section explains how to apply the ESG framework and gives an overview of the basic technical concepts.  For more in-depth information especially regarding the discussion of the approach, please refer to the published `research article <https://doi.org/10.48550/arXiv.2402.15230>`__.
 
 Framework
 ---------
