@@ -34,16 +34,14 @@ class RequestOutput(_BaseModel):
         description="Prediction of power production in W"
     )
 
-
-class FittedParameters(_BaseModel):
-    pv_system: PVSystem
-
+class FitParameterArguments(_BaseModel):
+    geographic_position: GeographicPosition
 
 class Observations(_BaseModel):
     measured_power: ValueMessageList = Field(
         description="Measured power production in W"
     )
 
+class FittedParameters(_BaseModel):
+    pv_system: PVSystem
 
-class FitParameterArguments(_BaseModel):
-    geographic_position: GeographicPosition
