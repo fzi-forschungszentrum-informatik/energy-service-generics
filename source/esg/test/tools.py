@@ -191,7 +191,7 @@ class GenericServiceMock:
             f"/{endpoint}/{task_uuid}/status/", method="GET"
         )
         expected_status_request.respond_with_json(
-            TaskStatus(status_text="running").model_dump_jsonable()
+            TaskStatus(status_text="ready").model_dump_jsonable()
         )
 
         expected_result_request = self.httpserver.expect_oneshot_request(
