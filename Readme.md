@@ -6,7 +6,7 @@ A framework for the implementation of web-services (as well as the corresponding
 
 Energy Management Systems (EMSs), in a sense of software computing optimized operational schedules and executing these on devices, have been demonstrated to be capable of reducing energy demand, lowering $CO_2$ emissions and/or unlocking flexibility. However, in order to have a practical impact to mitigate global warming EMSs will be required in large scales, like e.g. applied to thousands of buildings. This repository aims at supporting the widespread adoption of EMSs by enabling the provisioning of forecasting and optimization algorithms for energy management at scale. Energy Service Generics is a framework that allows scientists and developers to derive fully functional web services as well as the corresponding client software for forecasting or optimization code written in Python with ease.
 
-For further information about the framework please consult the [corresponding paper available here](https://arxiv.org/abs/2402.15230). The latter provides further details about motivation and necessity of web-services for EMS applications, an extensive discussion of the technical design underlying the Energy Service Generics framework as well documentation of other relevant  aspects.
+For further information about the framework please consult the [corresponding paper available here](https://doi.org/10.1017/dce.2025.14). The latter provides further details about motivation and necessity of web-services for EMS applications, an extensive discussion of the technical design underlying the Energy Service Generics framework as well documentation of other relevant  aspects.
 
 ## Usage
 
@@ -41,13 +41,14 @@ pytest ./source/tests
 Please consider citing us if this software and/or the accompanying [paper](https://arxiv.org/abs/2402.15230) was useful for your scientific work. You can use the following BibTex entry:
 
 ```
-@misc{wölfle2024open,
-      title={Open Energy Services -- Forecasting and Optimization as a Service for Energy Management Applications at Scale}, 
-      author={David Wölfle and Kevin Förderer and Tobias Riedel and Lukas Landwich and Ralf Mikut and Veit Hagenmeyer and Hartmut Schmeck},
-      year={2024},
-      eprint={2402.15230},
-      archivePrefix={arXiv},
-      primaryClass={cs.SE}
+@article{
+    woelfle_open_2025,
+    title={Open energy services: forecasting and optimization as a service for energy management applications at scale},
+    author={Wölfle, David and Förderer, Kevin and Riedel, Tobias and Fernengel, Natascha and Landwich, Lukas and Mikut, Ralf and Hagenmeyer, Veit and Schmeck, Hartmut},
+    journal={Data-Centric Engineering},
+    year={2025},
+    volume={6},
+    DOI={10.1017/dce.2025.14},
 }
 ```
 
