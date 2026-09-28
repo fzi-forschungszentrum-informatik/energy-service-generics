@@ -177,7 +177,11 @@ def compute_fit_parameters_input_model(FitParameterArguments, Observations):
 
 
 def execute_payload(
-    input_data_json, InputDataModel, payload_function, OutputDataModel
+    input_data_json,
+    InputDataModel,
+    payload_function,
+    OutputDataModel,
+    exclude_unset=False,
 ):
     """
     Invoke the payload function and manage JSON de-/serialization.
@@ -198,6 +202,10 @@ def execute_payload(
     OutputDataModel : Pydantic model
         The data model used to serialize whatever is returned by
         `payload_function`.
+    exclude_unset : Bool
+        Will be forwarded to `model_dump_json`. If True will not dump
+        fields which only hold default values. See:
+        https://pydantic.dev/docs/validation/dev/api/pydantic-core/pydantic_core_schema/#pydantic_core.core_schema.SerializationInfo.exclude_unset
 
     Returns:
     --------
@@ -218,7 +226,7 @@ def execute_payload(
     output_data = payload_function(input_data)
     output_data_json = OutputDataModel.model_validate(
         output_data
-    ).model_dump_json()
+    ).model_dump_json(exclude_unset=exclude_unset)
     return output_data_json
 
 
@@ -228,6 +236,7 @@ def invoke_handle_request(
     handle_request_function,
     RequestOutput,
     FittedParameters=None,
+    exclude_unset=False,
 ):
     """
     Invoke `execute_payload` but with models adapted for the request case.
@@ -247,6 +256,10 @@ def invoke_handle_request(
         by the worker.
     RequestOutput : Pydantic model
         A model defining the structure of response data to requests.
+    exclude_unset : Bool
+        Will be forwarded to `model_dump_json`. If True will not dump
+        fields which only hold default values. See:
+        https://pydantic.dev/docs/validation/dev/api/pydantic-core/pydantic_core_schema/#pydantic_core.core_schema.SerializationInfo.exclude_unset
 
     Returns:
     --------
@@ -262,6 +275,7 @@ def invoke_handle_request(
         input_data_json=input_data_json,
         payload_function=handle_request_function,
         OutputDataModel=RequestOutput,
+        exclude_unset=exclude_unset,
     )
     return output_data_json
 
@@ -272,6 +286,7 @@ def invoke_fit_parameters(
     Observations,
     fit_parameters_function,
     FittedParameters,
+    exclude_unset=False,
 ):
     """
     Invoke `execute_payload` but with models adapted for the request case.
@@ -292,6 +307,10 @@ def invoke_fit_parameters(
     FittedParameters : pydantic model
         A model defining the structure of the fitted parameters required
         to compute a request.
+    exclude_unset : Bool
+        Will be forwarded to `model_dump_json`. If True will not dump
+        fields which only hold default values. See:
+        https://pydantic.dev/docs/validation/dev/api/pydantic-core/pydantic_core_schema/#pydantic_core.core_schema.SerializationInfo.exclude_unset
 
     Returns:
     --------
@@ -306,5 +325,6 @@ def invoke_fit_parameters(
         input_data_json=input_data_json,
         payload_function=fit_parameters_function,
         OutputDataModel=FittedParameters,
+        exclude_unset=exclude_unset,
     )
     return output_data_json

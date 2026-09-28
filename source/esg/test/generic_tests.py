@@ -52,12 +52,17 @@ class GenericMessageSerializationTest:
     invalid_msgs_as_jsonable : list of anything.
         Similar to `msgs_as_jsonable` but messages that are expected
         to cause an error during validation.
+    exclude_unset : Bool
+        Will be forwarded to `model_dump_json`. If True will not dump
+        fields which only hold default values. See:
+        https://pydantic.dev/docs/validation/dev/api/pydantic-core/pydantic_core_schema/#pydantic_core.core_schema.SerializationInfo.exclude_unset
     """
 
     ModelClass = None
     msgs_as_python = None
     msgs_as_jsonable = None
     invalid_msgs_as_jsonable = None
+    exclude_unset = False
 
     def test_python_to_jsonable(self):
         """
@@ -80,7 +85,9 @@ class GenericMessageSerializationTest:
         for msg_as_python, expected_msg_as_jsonable in test_messages:
 
             model_instance = self.ModelClass.model_validate(msg_as_python)
-            actual_msg_as_json = model_instance.model_dump_json()
+            actual_msg_as_json = model_instance.model_dump_json(
+                exclude_unset=self.exclude_unset
+            )
             actual_msg_as_jsonable = json.loads(actual_msg_as_json)
 
             assert actual_msg_as_jsonable == expected_msg_as_jsonable
@@ -321,6 +328,10 @@ class GenericFOOCTest(TestClassWithFixtures):
     output_data_jsonable : list of anything.
         Similar to `input_data_jsonable` but now to expected output
         for each item in the input.
+    exclude_unset : Bool
+        Will be forwarded to `model_dump_json`. If True will not dump
+        fields which only hold default values. See:
+        https://pydantic.dev/docs/validation/dev/api/pydantic-core/pydantic_core_schema/#pydantic_core.core_schema.SerializationInfo.exclude_unset
     """
 
     fixture_names = ()
@@ -329,6 +340,7 @@ class GenericFOOCTest(TestClassWithFixtures):
     OutputDataModel = None
     input_data_jsonable = None
     output_data_jsonable = None
+    exclude_unset = False
 
     def assert_output_equal(
         self, actual_output_jsonable, expected_output_jsonable
@@ -360,7 +372,9 @@ class GenericFOOCTest(TestClassWithFixtures):
             input_data = self.InputDataModel.model_validate(input_jsonable)
             output_data = payload_function(input_data)
             actual_output = self.OutputDataModel.model_validate(output_data)
-            actual_output_jsonable = json.loads(actual_output.model_dump_json())
+            actual_output_jsonable = json.loads(
+                actual_output.model_dump_json(exclude_unset=self.exclude_unset)
+            )
 
             self.assert_output_equal(
                 actual_output_jsonable, expected_output_jsonable
@@ -542,12 +556,17 @@ class GenericEndToEndServiceTests:
         A list of input objects that that are presented to the service.
     expected_outputs_jsonable : list of dict (JSONable representation)
         A list of output objects that will be expected to be returned.
+    exclude_unset : Bool
+        Will be forwarded to `model_dump_json`. If True will not dump
+        fields which only hold default values. See:
+        https://pydantic.dev/docs/validation/dev/api/pydantic-core/pydantic_core_schema/#pydantic_core.core_schema.SerializationInfo.exclude_unset
     """
 
     service = None
     test_client = None
     inputs_jsonable = None
     expected_outputs_jsonable = None
+    exclude_unset = False
 
     def test_service_root_online(self):
         """
@@ -600,7 +619,10 @@ class GenericEndToEndServiceTests:
                 "/request/%s/result/" % request_ID,
             )
             assert response.status_code == 200
-            assert response.model_dump_json() == expected_output_data_jsonable
+            actual_output_data_jsonable = response.model_dump_json(
+                exclude_unset=self.exclude_unset
+            )
+            assert actual_output_data_jsonable == expected_output_data_jsonable
 
             # Once the result is ready the status should be set to "ready", it
             # easier to test this way as polling here until ready is set and

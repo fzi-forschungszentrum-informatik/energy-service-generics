@@ -24,6 +24,7 @@ import json
 from pathlib import Path
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import ValidationError
 import pytest
 from unittest.mock import patch
@@ -296,6 +297,10 @@ class TestExecutePayload:
     class DemoOutputDataModel(BaseModel):
         sum: int
 
+    class DemoOutputDataModelWithDefault(BaseModel):
+        sum: int
+        other: int = Field(default=1)
+
     @staticmethod
     def demo_payload_function(input_data):
         _sum = 0
@@ -355,6 +360,26 @@ class TestExecutePayload:
                 OutputDataModel=self.DemoOutputDataModel,
             )
 
+    def test_output_data_can_ignore_optional(self):
+        """
+        Verify that the `OutputDataModel` can be used with
+        exclude_unset, which doesn't output default parameters.
+        """
+        input_data_json = json.dumps({"ints": [1, 2, 3, 4]})
+
+        expected_output_data_jsonable = {"sum": 10}
+
+        actual_output_data_json = execute_payload(
+            input_data_json=input_data_json,
+            InputDataModel=self.DemoInputDataModel,
+            payload_function=self.demo_payload_function,
+            OutputDataModel=self.DemoOutputDataModelWithDefault,
+            exclude_unset=True,
+        )
+        actual_output_data_jsonable = json.loads(actual_output_data_json)
+
+        assert actual_output_data_jsonable == expected_output_data_jsonable
+
 
 class TestInvokeHandleRequest:
     """
@@ -403,6 +428,29 @@ class TestInvokeHandleRequest:
 
         assert actual_output_data_jsonable == expected_output_data_jsonable
 
+    def test_exclude_unset_forwarded(self):
+        """
+        Check that it is possible to forward `exclude_unset` to
+        `execute_payload`.
+        """
+        input_data_json = json.dumps({"arguments": {"ints": [1, 2, 3, 4]}})
+        expected_output_data_jsonable = {"weighted_sum": 10}
+
+        class RequestOutputWithOptional(_BaseModel):
+            weighted_sum: int
+            other: int = Field(default=1)
+
+        actual_output_data_json = invoke_handle_request(
+            input_data_json=input_data_json,
+            RequestArguments=RequestArguments,
+            handle_request_function=handle_request,
+            RequestOutput=RequestOutputWithOptional,
+            exclude_unset=True,
+        )
+        actual_output_data_jsonable = json.loads(actual_output_data_json)
+
+        assert actual_output_data_jsonable == expected_output_data_jsonable
+
 
 class TestInvokeFitParameters:
     """
@@ -427,6 +475,35 @@ class TestInvokeFitParameters:
             Observations=Observations,
             fit_parameters_function=fit_parameters,
             FittedParameters=FittedParameters,
+        )
+        actual_output_data_jsonable = json.loads(actual_output_data_json)
+
+        assert actual_output_data_jsonable == expected_output_data_jsonable
+
+    def test_exclude_unset_forwarded(self):
+        """
+        Check that it is possible to forward `exclude_unset` to
+        `execute_payload`.
+        """
+        input_data_json = json.dumps(
+            {
+                "arguments": [{"ints": [1, 2, 3, 4]}, {"ints": [6, 7, 8, 9]}],
+                "observations": [{"weighted_sum": 30}, {"weighted_sum": 80}],
+            },
+        )
+
+        class FittedParametersWithOptional(_BaseModel):
+            weights: list[int]
+            other: int = Field(default=1)
+
+        expected_output_data_jsonable = {"weights": [1, 2, 3, 4]}
+        actual_output_data_json = invoke_fit_parameters(
+            input_data_json=input_data_json,
+            FitParameterArguments=FitParameterArguments,
+            Observations=Observations,
+            fit_parameters_function=fit_parameters,
+            FittedParameters=FittedParametersWithOptional,
+            exclude_unset=True,
         )
         actual_output_data_jsonable = json.loads(actual_output_data_json)
 
