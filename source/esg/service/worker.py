@@ -18,6 +18,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import os
+import json
 from pathlib import Path
 
 # To prevent tests from failing if only parts of the package are used.
@@ -34,9 +35,11 @@ def celery_app_from_environ():
     """
     Instantiates a Celery app with configuration loaded from environment vars.
 
-    NOTE: This is an incomplete set of settings. For a more generic approach
-          you may want to implement something like this approach here:
-          https://celery.school/celery-config-env-vars
+    Returns:
+    --------
+    app : Celery app
+        The instantiated Celery app.
+
     """
     name = os.getenv("CELERY__NAME")
     if not name:
@@ -46,7 +49,7 @@ def celery_app_from_environ():
         )
 
     # Set some option which seem generally useful for all transport types.
-    generic_useful_options = {
+    additional_config = {
         # Seems sane to retry the connection, might be that the container
         # of a potential broker takes longer to boot then the worker.
         # Besides, if we don't set this explicitly we'll get a super
@@ -61,6 +64,24 @@ def celery_app_from_environ():
         # https://github.com/fzi-forschungszentrum-informatik/energy-service-generics/blob/3a7c91d4dd0c6b245c780051d43b8f60606c01c0/source/esg/service/api.py#L72
         "task_track_started": True,
     }
+
+    for key, value in os.environ.items():
+        # Ignore these, they are handled specifically below.
+        if key in (
+            "CELERY__NAME",
+            "CELERY__BROKER_URL",
+            "CELERY__RESULT_BACKEND",
+            "CELERY__FS_TRANSPORT_BASE_FOLDER",
+        ):
+            continue
+        if key.startswith("CELERY__"):
+            celery_key = key.replace("CELERY__", "").lower()
+            try:
+                celery_value = json.loads(value)
+            except json.JSONDecodeError:
+                print(f"Could not parse variable {key} as JSON, is {value}")
+                continue
+            additional_config[celery_key] = celery_value
 
     broker_url = os.getenv("CELERY__BROKER_URL")
     result_backend = os.getenv("CELERY__RESULT_BACKEND")
@@ -91,7 +112,7 @@ def celery_app_from_environ():
                 "data_folder_out": f"{broker_folder}/",
             },
             result_backend=f"file://{results_folder}/",
-            **generic_useful_options,
+            **additional_config,
         )
         return app
     elif result_backend:
@@ -100,7 +121,7 @@ def celery_app_from_environ():
             name,
             broker_url=broker_url,
             result_backend=result_backend,
-            **generic_useful_options,
+            **additional_config,
         )
         return app
     elif "amqp://" in broker_url:
@@ -109,7 +130,7 @@ def celery_app_from_environ():
             name,
             broker_url=broker_url,
             result_backend="rpc://",
-            **generic_useful_options,
+            **additional_config,
         )
         return app
     else:

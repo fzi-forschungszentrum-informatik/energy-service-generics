@@ -218,6 +218,23 @@ class TestCeleryAppFromEnviron:
         # Finally, check for the generic options.
         self.verify_generic_options_in_app(app)
 
+    def test_additional_config_is_taken_over(self):
+        """
+        Check that we can directly inject other config options via evnironemnt
+        variables.
+        """
+
+        test_environ = {
+            "CELERY__NAME": "test_name",
+            "CELERY__BROKER_URL": "amqp://user:pass@broker:1234/vhost",
+            "CELERY__RESULT_BACKEND": "redis://localhost:6379/0",
+            "CELERY__RESULT_COMPRESSION": '"gzip"',
+        }
+        with patch.dict(os.environ, test_environ, clear=True):
+            app = celery_app_from_environ()
+
+        assert app.conf.result_compression == "gzip"
+
 
 class TestComputeRequestInputModel:
     """
