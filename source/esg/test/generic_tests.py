@@ -41,10 +41,12 @@ class GenericMessageSerializationTest:
     -----------
     ModelClass : pydantic model class
         The model that is used to serialize/deserialize the data.
-    msgs_as_python : list of anything.
+    msgs_as_python : list of anything or None
         The Python representation of the as defined in `testdata`.
         Each item in the list is treated as distinct message to
-        verify correct operation for.
+        verify correct operation for. If left to None will skip the
+        tests that verify the conversion from Python objects and will
+        only check that msgs_as_jsonable can be parsed.
     msgs_as_jsonable : list of anything.
         Similar to `data_as_python` but for JSONable representation.
         See the `testdata` module docstring for a discussion why we
@@ -69,6 +71,8 @@ class GenericMessageSerializationTest:
         Verify that the model can be used to generate the expected JSONable
         output.
         """
+        if self.msgs_as_python is None:
+            pytest.skip("Skipping test because msgs_as_python is None")
         test_messages = zip(self.msgs_as_python, self.msgs_as_jsonable)
         for msg_as_python, expected_msg_as_jsonable in test_messages:
 
@@ -81,6 +85,8 @@ class GenericMessageSerializationTest:
         """
         Verify that the model can be used to generate the expected JSON output.
         """
+        if self.msgs_as_python is None:
+            pytest.skip("Skipping test because msgs_as_python is None")
         test_messages = zip(self.msgs_as_python, self.msgs_as_jsonable)
         for msg_as_python, expected_msg_as_jsonable in test_messages:
 
@@ -96,26 +102,45 @@ class GenericMessageSerializationTest:
         """
         Check that the model can be used to parse the JSONable representation.
         """
+        if self.msgs_as_python is None:
+            # If no Python representation is provided, we just check that
+            # the JSONable representation can be parsed.
+            self.msgs_as_python = [None for _ in self.msgs_as_jsonable]
+
         test_messages = zip(self.msgs_as_python, self.msgs_as_jsonable)
         for msg_as_python, msg_as_jsonable in test_messages:
 
-            expected_msg_as_obj = self.ModelClass.model_validate(msg_as_python)
+            # This will raise if the model cannot parse the JSONable
+            # representation.
             actual_msg_as_obj = self.ModelClass.model_validate(msg_as_jsonable)
 
-            assert actual_msg_as_obj == expected_msg_as_obj
+            if msg_as_python is not None:
+                expected_msg_as_obj = self.ModelClass.model_validate(
+                    msg_as_python
+                )
+                assert actual_msg_as_obj == expected_msg_as_obj
 
     def test_json_to_python_object(self):
         """
         Check that the model can be used to parse the JSON representation.
         """
+        if self.msgs_as_python is None:
+            # If no Python representation is provided, we just check that
+            # the JSONable representation can be parsed.
+            self.msgs_as_python = [None for _ in self.msgs_as_jsonable]
+
         test_messages = zip(self.msgs_as_python, self.msgs_as_jsonable)
         for msg_as_python, msg_as_jsonable in test_messages:
 
-            expected_msg_as_obj = self.ModelClass.model_validate(msg_as_python)
+            # This will raise if the model cannot parse the JSON.
             msg_as_json = json.dumps(msg_as_jsonable)
             actual_msg_as_obj = self.ModelClass.model_validate_json(msg_as_json)
 
-            assert actual_msg_as_obj == expected_msg_as_obj
+            if msg_as_python is not None:
+                expected_msg_as_obj = self.ModelClass.model_validate(
+                    msg_as_python
+                )
+                assert actual_msg_as_obj == expected_msg_as_obj
 
     def test_validation_error_raised_for_invalid_jsonable(self):
         """
